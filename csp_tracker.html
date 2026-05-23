@@ -23,6 +23,25 @@
     --grid:rgba(255,255,255,.04);
     --shadow:0 18px 50px rgba(0,0,0,.55);
   }
+  body.light{
+    --ink:#f4f7fa;
+    --panel:#ffffff;
+    --panel-2:#f7f9fc;
+    --line:#d7dee8;
+    --line-soft:#e7ecf2;
+    --txt:#111827;
+    --txt-dim:#4b5563;
+    --txt-faint:#7b8794;
+    --amber:#b97913;
+    --amber-soft:#8a641f;
+    --mint:#0f9f6e;
+    --mint-dim:#b8e8d7;
+    --red:#d33f4d;
+    --red-dim:#f2bdc4;
+    --blue:#256fc7;
+    --grid:rgba(17,24,39,.08);
+    --shadow:0 14px 34px rgba(15,23,42,.12);
+  }
   *{box-sizing:border-box}
   html,body{margin:0;background:
     radial-gradient(1200px 700px at 80% -10%, rgba(240,169,59,.06), transparent 60%),
@@ -38,8 +57,18 @@
   h1{font-family:'Fraunces',serif;font-weight:900;font-size:34px;line-height:1;margin:0;letter-spacing:-.5px}
   h1 .em{color:var(--amber);font-style:italic;font-weight:600}
   .sub{color:var(--txt-dim);font-size:12.5px;margin-top:7px;letter-spacing:.2px}
+  .header-actions{display:flex;align-items:center;gap:10px;position:relative}
   .tag{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--amber-soft);
     border:1px solid var(--line);border-radius:999px;padding:5px 11px;letter-spacing:1.5px;text-transform:uppercase}
+  .settings-panel{position:absolute;right:0;top:calc(100% + 8px);width:270px;background:var(--panel-2);
+    border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:12px;display:none;z-index:40}
+  .settings-panel.open{display:block}
+  .settings-title{font-family:'Fraunces',serif;font-size:16px;font-weight:600;margin-bottom:10px}
+  .setting-row{margin-bottom:12px}.setting-row:last-child{margin-bottom:0}
+  .setting-row label{margin-bottom:6px}
+  .seg{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .seg button{background:var(--panel);border:1px solid var(--line);color:var(--txt-dim);border-radius:8px;padding:8px;cursor:pointer}
+  .seg button.active{border-color:var(--amber);color:var(--txt);background:rgba(240,169,59,.1)}
   .nav{display:flex;gap:8px;margin:0 0 18px}
   .navbtn{background:var(--panel-2);border:1px solid var(--line);color:var(--txt-dim);border-radius:8px;
     padding:9px 13px;font-size:12px;cursor:pointer}
@@ -48,9 +77,9 @@
   /* Summary strip */
   .summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);
     border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:26px}
-  .scell{background:var(--panel);padding:15px 16px;min-height:82px;display:grid;grid-template-rows:auto 1fr;align-items:end}
+  .scell{background:var(--panel);padding:15px 16px;min-height:82px;display:flex;flex-direction:column;justify-content:space-between}
   .scell .k{font-size:10.5px;color:var(--txt-faint);text-transform:uppercase;letter-spacing:1.2px}
-  .scell .v{font-family:'IBM Plex Mono',monospace;font-size:21px;font-weight:600;margin-top:7px;font-variant-numeric:tabular-nums;align-self:end}
+  .scell .v{font-family:'IBM Plex Mono',monospace;font-size:21px;font-weight:600;margin-top:auto;padding-top:7px;line-height:1;font-variant-numeric:tabular-nums;min-height:28px;display:flex;align-items:flex-end}
   .scell .v.pos{color:var(--mint)} .scell .v.neg{color:var(--red)}
 
   /* Layout */
@@ -80,6 +109,9 @@
   input,select{width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--txt);
     border-radius:9px;padding:10px 11px;font-family:'IBM Plex Mono',monospace;font-size:13.5px;outline:none}
   input:focus,select:focus{border-color:var(--amber);box-shadow:0 0 0 3px rgba(240,169,59,.12)}
+  .input-action{display:flex;gap:7px;align-items:center}
+  .input-action input{min-width:0;flex:1}
+  .input-action .mini{padding:9px 10px}
   .opt-head{font-size:10.5px;color:var(--txt-faint);letter-spacing:1px;text-transform:uppercase;
     margin:18px 0 12px;padding-top:14px;border-top:1px dashed var(--line);display:flex;gap:8px;align-items:center}
   .btn{width:100%;background:linear-gradient(180deg,var(--amber),#d9941f);color:#1a1205;border:none;
@@ -107,12 +139,12 @@
   .empty{padding:50px 20px;text-align:center;color:var(--txt-faint);font-size:13px}
   .empty .big{font-family:'Fraunces',serif;font-style:italic;font-size:19px;color:var(--txt-dim);margin-bottom:6px}
 
-  .pos{border:1px solid var(--line);border-radius:14px;margin-bottom:14px;overflow:hidden;background:var(--panel-2)}
-  .pos.sel{border-color:var(--amber)}
-  .pos .ph{display:flex;align-items:center;gap:12px;padding:13px 15px;cursor:pointer;
+  .position-card{border:1px solid var(--line);border-radius:14px;margin-bottom:14px;overflow:hidden;background:var(--panel-2)}
+  .position-card.sel{border-color:var(--amber)}
+  .position-card .ph{display:flex;align-items:center;gap:12px;padding:13px 15px;cursor:pointer;
     background:linear-gradient(180deg,rgba(255,255,255,.02),transparent)}
-  .pos .ticker{font-family:'Fraunces',serif;font-weight:900;font-size:18px;letter-spacing:-.3px}
-  .pos .strike{font-family:'IBM Plex Mono',monospace;color:var(--amber-soft);font-size:13px}
+  .position-card .ticker{font-family:'Fraunces',serif;font-weight:900;font-size:18px;letter-spacing:-.3px}
+  .position-card .strike{font-family:'IBM Plex Mono',monospace;color:var(--amber-soft);font-size:13px}
   .pill{font-family:'IBM Plex Mono',monospace;font-size:10.5px;padding:3px 8px;border-radius:6px;letter-spacing:.5px}
   .pill.dte{background:rgba(90,169,255,.13);color:var(--blue)}
   .pill.dte.warn{background:rgba(240,169,59,.15);color:var(--amber)}
@@ -121,12 +153,12 @@
   .pill.otm{background:rgba(61,220,151,.1);color:var(--mint)}
   .pill.otm.warn{background:rgba(240,169,59,.15);color:var(--amber)}
   .pill.otm.crit{background:rgba(255,95,110,.15);color:var(--red)}
-  .pos .pl{margin-left:auto;text-align:right;font-family:'IBM Plex Mono',monospace}
-  .pos .pl .amt{font-size:16px;font-weight:600} .pos .pl .pct{font-size:10.5px;color:var(--txt-faint)}
-  .pos .amt.pos{color:var(--mint)} .pos .amt.neg{color:var(--red)}
+  .position-card .pl{margin-left:auto;text-align:right;font-family:'IBM Plex Mono',monospace}
+  .position-card .pl .amt{font-size:16px;font-weight:600} .position-card .pl .pct{font-size:10.5px;color:var(--txt-faint)}
+  .position-card .amt.pos{color:var(--mint)} .position-card .amt.neg{color:var(--red)}
 
   .pdetail{padding:0 15px;max-height:0;overflow:hidden;transition:max-height .3s ease,padding .3s ease}
-  .pos.sel .pdetail{max-height:760px;padding:4px 15px 16px}
+  .position-card.sel .pdetail{max-height:760px;padding:4px 15px 16px}
   .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line-soft);
     border:1px solid var(--line-soft);border-radius:10px;overflow:hidden;margin:8px 0 14px}
   .m{background:var(--panel);padding:10px 11px}
@@ -196,14 +228,38 @@
   <header>
     <div>
       <h1>Option <span class="em">Tracker</span></h1>
-      <div class="sub">卖出 Put / Call · 权利金 / 到期 / 每日时间价值衰减追踪</div>
+      <div class="sub" data-i18n="subtitle">卖出 Put / Call · 权利金 / 到期 / 每日时间价值衰减追踪</div>
     </div>
-    <div class="tag">Theta Decay Terminal</div>
+    <div class="header-actions">
+      <div class="tag">Theta Decay Terminal</div>
+      <button class="ghost" id="settingsBtn" title="Settings">设置</button>
+      <div class="settings-panel" id="settingsPanel">
+        <div class="settings-title" data-i18n="settingsTitle">设置</div>
+        <div class="setting-row">
+          <label data-i18n="languageSetting">语言 Language</label>
+          <div class="seg">
+            <button id="langZhBtn">中文</button>
+            <button id="langEnBtn">English</button>
+          </div>
+        </div>
+        <div class="setting-row">
+          <label data-i18n="marginSetting">CSP 保证金比例 %</label>
+          <input id="marginRatioInput" class="mono" type="number" min="1" max="1000" step="1" value="100">
+        </div>
+        <div class="setting-row">
+          <label data-i18n="themeSetting">显示模式 Theme</label>
+          <div class="seg">
+            <button id="themeDarkBtn">黑色</button>
+            <button id="themeLightBtn">白色</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </header>
 
   <div class="nav">
-    <button class="navbtn active" id="openPageBtn">当前持仓</button>
-    <button class="navbtn" id="historyPageBtn">历史交易</button>
+    <button class="navbtn active" id="openPageBtn" data-i18n="openPage">当前持仓</button>
+    <button class="navbtn" id="historyPageBtn" data-i18n="historyPage">历史交易</button>
   </div>
 
   <section class="page" id="openPage">
@@ -212,7 +268,7 @@
   <div class="grid" id="openGrid">
     <!-- LEFT: Add form -->
     <div class="card form-card" id="newPositionCard">
-      <div class="head"><div class="t">新建仓位 / New Position</div><button class="ghost" id="toggleNewPositionBtn">收起</button></div>
+      <div class="head"><div class="t" data-i18n="newPositionTitle">新建仓位 / New Position</div><button class="ghost" id="toggleNewPositionBtn">收起</button></div>
       <div class="body">
         <div class="row2">
           <div class="field"><label>标的 Ticker</label><input id="f_ticker" placeholder="QQQ" autocomplete="off"><div class="eod-status" id="formEodStatus"></div></div>
@@ -236,13 +292,13 @@
           <div class="field"><label>乘数 Mult</label><input id="f_mult" class="mono" type="number" step="1" value="100"></div>
         </div>
 
-        <div class="opt-head">⚙ 可选 · 用于 Black-Scholes 衰减建模</div>
+        <div class="opt-head" data-i18n="modelInputs">⚙ 可选 · 用于 Black-Scholes 衰减建模</div>
         <div class="row2">
           <div class="field"><label>正股价 Underlying</label><input id="f_under" class="mono" type="number" step="any" placeholder="自动抓取 EOD"></div>
-          <div class="field"><label>IV %</label><input id="f_iv" class="mono" type="number" step="any" placeholder="48"></div>
+          <div class="field"><label>IV %</label><div class="input-action"><input id="f_iv" class="mono" type="number" step="any" placeholder="48"><button class="mini" id="fetchFormIvBtn" type="button">自动获取</button></div><div class="eod-status" id="formIvStatus"></div></div>
         </div>
         <div class="field"><label>无风险利率 r %</label><input id="f_rate" class="mono" type="number" step="any" value="4.2"></div>
-        <div class="hint">填了正股价 + IV，工具会用 Black-Scholes 画出每日时间价值衰减曲线并估算日 theta。不填也能用，只追踪 DTE 和你手动更新的 mark。</div>
+        <div class="hint" data-i18n="modelHint">填了正股价 + IV，工具会用 Black-Scholes 画出每日时间价值衰减曲线并估算日 theta。不填也能用，只追踪 DTE 和你手动更新的 mark。</div>
 
         <div style="height:6px"></div>
         <button class="btn" id="addBtn">+ 添加仓位</button>
@@ -252,7 +308,7 @@
     <!-- RIGHT: Positions -->
     <div class="card">
         <div class="head">
-        <div class="t">持仓 / Positions</div>
+        <div class="t" data-i18n="positionsTitle">持仓 / Positions</div>
         <div class="tools">
           <div class="mono" style="font-size:11px;color:var(--txt-faint)" id="posCount"></div>
           <span class="file-status" id="fileStatus">未绑定 JSON</span>
@@ -279,7 +335,7 @@
   <section class="page hide" id="historyPage">
     <div class="grid form-collapsed" id="historyGrid">
       <div class="card form-card collapsed" id="historyFormCard">
-        <div class="head"><div class="t">录入历史交易 / Closed Trade</div><button class="ghost" id="toggleHistoryFormBtn">展开</button></div>
+        <div class="head"><div class="t" data-i18n="closedTradeTitle">录入历史交易 / Closed Trade</div><button class="ghost" id="toggleHistoryFormBtn">展开</button></div>
         <div class="body">
           <div class="row2">
             <div class="field"><label>Ticker</label><input id="h_ticker" placeholder="QQQ" autocomplete="off"></div>
@@ -307,7 +363,7 @@
         </div>
       </div>
       <div class="card">
-        <div class="head"><div class="t">历史 / Closed Trades</div><div class="mono" style="font-size:11px;color:var(--txt-faint)" id="historyCount"></div></div>
+        <div class="head"><div class="t" data-i18n="historyTitle">历史 / Closed Trades</div><div class="mono" style="font-size:11px;color:var(--txt-faint)" id="historyCount"></div></div>
         <div class="body" id="historyList"></div>
       </div>
     </div>
@@ -316,8 +372,8 @@
   <input id="importFile" type="file" accept="application/json,.json" style="display:none">
 
   <footer>
-    数据默认保存在浏览器本地；绑定 JSON 后会实时写入所选文件。EOD 正股价格通过本地 Python/yfinance 服务抓取。盈亏按 <span class="mono">已收权利金 − 当前 mark</span> 计算，正值=对卖方有利。
-    <div class="disc">⚠️ 本工具仅用于记录与教学，不构成投资建议。Black-Scholes 衰减为<b>理论估算</b>（假设正股价与 IV 不变、欧式定价），真实期权价格受 IV 变化、skew、流动性、提前行权等影响，会偏离曲线。务必以券商实际报价为准。</div>
+    <span data-i18n="footerMain">数据默认保存在浏览器本地；绑定 JSON 后会实时写入所选文件。EOD 正股价格通过本地 Python/yfinance 服务抓取。盈亏按 已收权利金 − 当前 mark 计算，正值=对卖方有利。</span>
+    <div class="disc" data-i18n="footerDisc">⚠️ 本工具仅用于记录与教学，不构成投资建议。Black-Scholes 衰减为理论估算（假设正股价与 IV 不变、欧式定价），真实期权价格受 IV 变化、skew、流动性、提前行权等影响，会偏离曲线。务必以券商实际报价为准。</div>
   </footer>
 </div>
 
@@ -583,6 +639,60 @@ const fmt = (n,d=2)=> (n==null||isNaN(n))?'—':n.toLocaleString('en-US',{minimu
 const fmt0 = n => (n==null||isNaN(n))?'—':Math.round(n).toLocaleString('en-US');
 const fmtPct = (n,d=1)=> (n==null||isNaN(n))?'—':n.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d})+'%';
 
+const UI_TEXT = {
+  subtitle:['卖出 Put / Call · 权利金 / 到期 / 每日时间价值衰减追踪','Short Put / Call tracking · premium, expiry, theta decay'],
+  settingsTitle:['设置','Settings'],
+  languageSetting:['语言 Language','Language'],
+  marginSetting:['CSP 保证金比例 %','CSP margin requirement %'],
+  themeSetting:['显示模式 Theme','Theme'],
+  openPage:['当前持仓','Open Positions'],
+  historyPage:['历史交易','Closed Trades'],
+  positionsTitle:['持仓 / Positions','Positions'],
+  newPositionTitle:['新建仓位 / New Position','New Position'],
+  closedTradeTitle:['录入历史交易 / Closed Trade','Closed Trade Entry'],
+  historyTitle:['历史 / Closed Trades','Closed Trades'],
+  settingsBtn:['设置','Settings'],
+  collapse:['收起','Collapse'],
+  expand:['展开','Expand'],
+  refreshAll:['批量刷新报价 / EOD','Refresh Quotes / EOD'],
+  json:['JSON','JSON'],
+  bind:['绑定','Bind'],
+  load:['读取','Load'],
+  export:['导出','Export'],
+  import:['导入','Import'],
+  addPosition:['+ 添加仓位','+ Add Position'],
+  addHistory:['+ 添加历史交易','+ Add Closed Trade'],
+  saveHistory:['保存历史交易','Save Closed Trade'],
+  noPositionsTitle:['还没有仓位','No open positions'],
+  noPositionsBody:['在左侧填入你的第一个卖出期权，比如 QQQ 633P 或 720C。','Enter your first short option on the left, such as QQQ 633P or 720C.'],
+  noHistoryTitle:['还没有历史交易','No closed trades yet'],
+  noHistoryBody:['从当前持仓平仓，或在左侧手动录入。','Close an open position or enter a closed trade on the left.'],
+  dataDate:['数据日期','Data date'],
+  apiNotFetched:['API未抓取','API not fetched'],
+  notFetched:['未抓取','Not fetched'],
+  manualMark:['手动更新 mark','Update mark manually'],
+  expired:['已到期','Expired'],
+  premiumCapture:['捕获','captured'],
+  closePosition:['平仓','Close'],
+  deletePosition:['删除','Delete'],
+  saveMark:['保存 Mark','Save Mark'],
+  fetchQuote:['抓取期权报价','Fetch Option Quote'],
+  fetchEod:['抓取 EOD','Fetch EOD'],
+  updateUnderIv:['更新正股/IV','Update Underlying/IV'],
+  autoFetch:['自动获取','Auto'],
+  fetchingIv:['抓取 IV...','Fetching IV...'],
+  ivFetched:['IV 已获取','IV fetched'],
+  ivMissingInputs:['请先填写 Ticker / Expiry / Strike','Fill Ticker / Expiry / Strike first'],
+  ivUnavailable:['没有可用 IV','No IV available']
+  ,
+  modelInputs:['⚙ 可选 · 用于 Black-Scholes 衰减建模','Optional · Black-Scholes decay inputs'],
+  modelHint:['填了正股价 + IV，工具会用 Black-Scholes 画出每日时间价值衰减曲线并估算日 theta。不填也能用，只追踪 DTE 和你手动更新的 mark。','With underlying + IV, the tool estimates Black-Scholes decay and daily theta. Without them, it still tracks DTE and manually updated marks.'],
+  footerMain:['数据默认保存在浏览器本地；绑定 JSON 后会实时写入所选文件。EOD 正股价格通过本地 Python/yfinance 服务抓取。盈亏按 已收权利金 − 当前 mark 计算，正值=对卖方有利。','Data is saved locally by default; after binding JSON, changes are written to that file. EOD underlying prices come from the local Python/yfinance service. P/L is premium collected minus current mark; positive favors the seller.'],
+  footerDisc:['⚠️ 本工具仅用于记录与教学，不构成投资建议。Black-Scholes 衰减为理论估算（假设正股价与 IV 不变、欧式定价），真实期权价格受 IV 变化、skew、流动性、提前行权等影响，会偏离曲线。务必以券商实际报价为准。','This tool is for tracking and education only, not investment advice. Black-Scholes decay is a theoretical estimate assuming unchanged underlying and IV; real option prices can diverge due to IV shifts, skew, liquidity, and exercise risk. Use broker quotes as the source of truth.']
+};
+const L = key => (UI.lang === 'en' ? UI_TEXT[key][1] : UI_TEXT[key][0]);
+const dual = (zh, en) => UI.lang === 'en' ? en : zh;
+
 let POS = [];
 let HISTORY = [];
 let selId = null;
@@ -593,6 +703,8 @@ let formEodSeq = 0;
 let editingHistoryId = null;
 let histOpenIds = new Set();
 let jsonMenuOpen = false;
+let settingsOpen = false;
+let UI = { lang:'zh', theme:'dark', marginRatio:100 };
 
 function fmtStamp(ts){
   if(!ts) return '—';
@@ -626,7 +738,7 @@ function updateRefreshStatus(msg){
     el.textContent = msg;
     return;
   }
-  el.textContent = `数据日期：${latestMarketDataDate() || '—'}`;
+  el.textContent = `${L('dataDate')}：${latestMarketDataDate() || '—'}`;
 }
 
 function setFileStatus(msg, cls){
@@ -634,6 +746,108 @@ function setFileStatus(msg, cls){
   if(!el) return;
   el.textContent = msg;
   el.className = 'file-status' + (cls ? ' '+cls : '');
+}
+
+function translateFileStatus(){
+  const el = $('fileStatus');
+  if(!el) return;
+  const text = el.textContent || '';
+  const partial = text.match(/期权报价部分失败\s+(\d+)\/(\d+)/) || text.match(/Option quotes partially failed\s+(\d+)\/(\d+)/);
+  if(partial){
+    el.textContent = dual(`期权报价部分失败 ${partial[1]}/${partial[2]}`, `Option quotes partially failed ${partial[1]}/${partial[2]}`);
+    return;
+  }
+  const fixed = {
+    '正在自动刷新期权报价...':['正在自动刷新期权报价...','Auto-refreshing option quotes...'],
+    '期权报价已自动刷新':['期权报价已自动刷新','Option quotes refreshed'],
+    '正在刷新报价和 EOD...':['正在刷新报价和 EOD...','Refreshing quotes and EOD...'],
+    '本地已保存 · 未绑定 JSON':['本地已保存 · 未绑定 JSON','Saved locally · JSON not bound'],
+    '本地已保存 · 浏览器不支持直写 JSON':['本地已保存 · 浏览器不支持直写 JSON','Saved locally · direct JSON write unsupported'],
+    'JSON 写入失败':['JSON 写入失败','JSON write failed'],
+    'JSON 绑定失败':['JSON 绑定失败','JSON bind failed'],
+    'JSON 读取失败':['JSON 读取失败','JSON load failed']
+  };
+  for(const pair of Object.values(fixed)){
+    if(text === pair[0] || text === pair[1]){
+      el.textContent = dual(pair[0], pair[1]);
+      return;
+    }
+  }
+}
+
+function loadUiSettings(){
+  try{
+    const saved = JSON.parse(localStorage.getItem('csp_ui_settings') || '{}');
+    UI = {
+      lang: saved.lang === 'en' ? 'en' : 'zh',
+      theme: saved.theme === 'light' ? 'light' : 'dark',
+      marginRatio: Math.max(1, +(saved.marginRatio || 100))
+    };
+  }catch(e){}
+}
+
+function saveUiSettings(){
+  try{ localStorage.setItem('csp_ui_settings', JSON.stringify(UI)); }catch(e){}
+}
+
+function setLabel(inputId, zh, en){
+  const input = $(inputId);
+  const label = input && input.closest('.field') ? input.closest('.field').querySelector('label') : null;
+  if(label) label.textContent = dual(zh, en);
+}
+
+function applyUiSettings(){
+  document.body.classList.toggle('light', UI.theme === 'light');
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.dataset.i18n;
+    if(UI_TEXT[key]) el.textContent = L(key);
+  });
+  $('settingsBtn').textContent = L('settingsBtn');
+  $('refreshAllDataBtn').textContent = L('refreshAll');
+  $('jsonMenuBtn').textContent = L('json');
+  $('fetchFormIvBtn').textContent = L('autoFetch');
+  $('bindFileBtn').textContent = L('bind');
+  $('loadFileBtn').textContent = L('load');
+  $('exportBtn').textContent = L('export');
+  $('importBtn').textContent = L('import');
+  $('addBtn').textContent = L('addPosition');
+  $('addHistoryBtn').textContent = editingHistoryId ? L('saveHistory') : L('addHistory');
+  $('toggleNewPositionBtn').textContent = $('newPositionCard').classList.contains('collapsed') ? L('expand') : L('collapse');
+  $('toggleHistoryFormBtn').textContent = $('historyFormCard').classList.contains('collapsed') ? L('expand') : L('collapse');
+  $('marginRatioInput').value = UI.marginRatio;
+  $('langZhBtn').classList.toggle('active', UI.lang === 'zh');
+  $('langEnBtn').classList.toggle('active', UI.lang === 'en');
+  $('themeDarkBtn').classList.toggle('active', UI.theme === 'dark');
+  $('themeLightBtn').classList.toggle('active', UI.theme === 'light');
+  $('themeDarkBtn').textContent = dual('黑色', 'Dark');
+  $('themeLightBtn').textContent = dual('白色', 'Light');
+
+  setLabel('f_ticker','标的 Ticker','Ticker');
+  setLabel('f_type','类型 Type','Type');
+  setLabel('f_ccy','币种 Ccy','Currency');
+  setLabel('f_strike','Strike','Strike');
+  setLabel('f_exp','到期日 Expiry','Expiry');
+  setLabel('f_prem','权利金/张 Premium','Premium / Contract');
+  setLabel('f_open','开仓日 Open','Open Date');
+  setLabel('f_qty','张数 Contracts','Contracts');
+  setLabel('f_mult','乘数 Mult','Multiplier');
+  setLabel('f_under','正股价 Underlying','Underlying');
+  setLabel('f_iv','IV %','IV %');
+  setLabel('f_rate','无风险利率 r %','Risk-free Rate %');
+  setLabel('h_ticker','Ticker','Ticker');
+  setLabel('h_type','类型 Type','Type');
+  setLabel('h_ccy','币种 Ccy','Currency');
+  setLabel('h_strike','Strike','Strike');
+  setLabel('h_exp','到期日 Expiry','Expiry');
+  setLabel('h_open','开仓日 Open','Open Date');
+  setLabel('h_close','平仓日 Close','Close Date');
+  setLabel('h_prem','收取权利金/张 Open Credit','Open Credit / Contract');
+  setLabel('h_closePrice','平仓价格/张 Close Debit','Close Debit / Contract');
+  setLabel('h_qty','张数 Contracts','Contracts');
+  setLabel('h_mult','乘数 Mult','Multiplier');
+  setLabel('h_notes','备注 Notes','Notes');
+  translateFileStatus();
+  updateRefreshStatus();
 }
 
 async function persistPositions(){
@@ -674,7 +888,8 @@ function modelMark(p){ // theoretical current option value via BS, if inputs pre
 function maxProfit(p){ return p.prem*p.qty*p.mult; }
 function capital(p){
   const px = optType(p) === 'call' && p.under ? +p.under : +p.strike;
-  return px*p.qty*p.mult;
+  const base = px*p.qty*p.mult;
+  return optType(p) === 'put' ? base * (UI.marginRatio || 100) / 100 : base;
 }
 function holdingDays(openStr, closeStr){
   if(!openStr) return null;
@@ -722,13 +937,13 @@ function renderSummary(){
   const yieldPct = cap ? collected / cap * 100 : null;
   const annualYieldPct = cap ? annualPremium / cap * 100 : null;
   $('summary').innerHTML = `
-    <div class="scell"><div class="k">持仓数 Positions</div><div class="v">${POS.length}</div></div>
-    <div class="scell"><div class="k">总权利金 Max Premium</div><div class="v">${ccy}${fmt0(collected)}</div></div>
-    <div class="scell"><div class="k">收益率 Yield</div><div class="v">${fmtPct(yieldPct)}</div></div>
-    <div class="scell"><div class="k">年化收益率 Annualized</div><div class="v">${fmtPct(annualYieldPct)}</div></div>
-    <div class="scell"><div class="k">当前未实现 Unrealized</div><div class="v ${unreal>=0?'pos':'neg'}">${ccy}${fmt0(unreal)}</div></div>
-    <div class="scell"><div class="k">日均 Theta /day</div><div class="v ${theta>=0?'pos':'neg'}">${thetaKnown?ccy+fmt0(theta):'—'}</div></div>
-    <div class="scell"><div class="k">占用资金 Cash Secured</div><div class="v" style="color:var(--amber)">${ccy}${fmt0(cap)}</div></div>`;
+    <div class="scell"><div class="k">${dual('持仓数 Positions','Positions')}</div><div class="v">${POS.length}</div></div>
+    <div class="scell"><div class="k">${dual('总权利金 Max Premium','Max Premium')}</div><div class="v">${ccy}${fmt0(collected)}</div></div>
+    <div class="scell"><div class="k">${dual('收益率 Yield','Yield')}</div><div class="v">${fmtPct(yieldPct)}</div></div>
+    <div class="scell"><div class="k">${dual('年化收益率 Annualized','Annualized')}</div><div class="v">${fmtPct(annualYieldPct)}</div></div>
+    <div class="scell"><div class="k">${dual('当前未实现 Unrealized','Unrealized')}</div><div class="v ${unreal>=0?'pos':'neg'}">${ccy}${fmt0(unreal)}</div></div>
+    <div class="scell"><div class="k">${dual('日均 Theta /day','Theta /day')}</div><div class="v ${theta>=0?'pos':'neg'}">${thetaKnown?ccy+fmt0(theta):'—'}</div></div>
+    <div class="scell"><div class="k">${dual('占用资金 Cash Secured','Cash Secured')}</div><div class="v" style="color:var(--amber)">${ccy}${fmt0(cap)}</div></div>`;
 }
 
 function decaySVG(p){
@@ -802,17 +1017,23 @@ function posCard(p){
   const held = holdingDays(p.open);
   const totalLife = dte>=0 && held!=null ? dte + held : null;
   const heldRatio = totalLife ? held / totalLife * 100 : null;
-  const timeHint = `距离到期 ${dte<0?'已到期':dte+' 日'}，持有 ${held==null?'—':held+' 日'}，持有/总周期 ${fmtPct(heldRatio,1)}`;
+  const timeHint = dual(
+    `距离到期 ${dte<0?'已到期':dte+' 日'}，持有 ${held==null?'—':held+' 日'}，持有/总周期 ${fmtPct(heldRatio,1)}`,
+    `${dte<0?'Expired':dte+' days to expiry'}, held ${held==null?'—':held+' days'}, held/total life ${fmtPct(heldRatio,1)}`
+  );
   const ann = positionAnnualized(p);
   const q = p.quote || {};
   const quoteLine = q.bid!=null && q.ask!=null
     ? `${fmt(q.bid,2)} / ${fmt(q.ask,2)}<br><span style="color:var(--txt-faint)">Spread ${fmt(q.spread,2)} (${fmtPct(q.spreadPct,1)})</span>`
-    : '未抓取';
+    : L('notFetched');
   const spreadTag = q.spreadPct!=null ? `Spr ${fmtPct(q.spreadPct,1)}` : 'Spr —';
   const spreadCls = q.spreadPct==null?'':q.spreadPct>20?'crit':q.spreadPct>8?'warn':'';
+  const riskTag = otm!=null && otm<15 && dte<21
+    ? `<div style="margin:6px 0 10px"><span class="pill otm ${otm<10||dte<7?'crit':'warn'}">${dual('风险提示：DTE<21 且 OTM<15%，关注平仓/展期','Risk alert: DTE<21 and OTM<15%; consider close or roll')}</span></div>`
+    : '';
   const sel = p.id===selId;
   return `
-  <div class="pos ${sel?'sel':''}" data-id="${p.id}">
+  <div class="position-card ${sel?'sel':''}" data-id="${p.id}">
     <div class="ph" onclick="toggle('${p.id}')">
       <span class="ticker">${p.ticker||'—'}</span>
       <span class="strike">${sym}${fmt(p.strike,0)}${optionCode} ×${p.qty}</span>
@@ -823,47 +1044,48 @@ function posCard(p){
       <span class="pill otm ${otmCls}">OTM ${otm==null?'—':fmtPct(otm,1)}</span>
       <span class="pl">
         <div class="amt ${pl>=0?'pos':'neg'}">${pl==null?'—':(pl>=0?'+':'')+sym+fmt0(pl)}</div>
-        <div class="pct">${pct==null?'手动更新 mark':(pct>=0?'+':'')+fmt(pct,0)+'% 捕获'}</div>
+        <div class="pct">${pct==null?L('manualMark'):(pct>=0?'+':'')+fmt(pct,0)+'% '+L('premiumCapture')}</div>
       </span>
     </div>
     <div class="pdetail">
+      ${riskTag}
       <div class="metrics">
-        <div class="m"><div class="mk">已收权利金</div><div class="mv amber">${sym}${fmt0(maxProfit(p))}</div></div>
-        <div class="m"><div class="mk">占用现金</div><div class="mv">${sym}${fmt0(capital(p))}</div></div>
-        <div class="m"><div class="mk">日 Theta</div><div class="mv ${th>=0?'pos':'neg'}">${th==null?'—':(th>=0?'+':'')+sym+fmt0(th)}</div></div>
-        <div class="m"><div class="mk">持有 / 年化</div><div class="mv">${held==null?'—':held+'d'}<br><span style="color:var(--txt-faint)">${fmtPct(ann,1)}</span></div></div>
-        <div class="m"><div class="mk">当前 Mark</div><div class="mv">${mark==null?'—':sym+fmt(mark,2)}</div></div>
+        <div class="m"><div class="mk">${dual('已收权利金','Premium Collected')}</div><div class="mv amber">${sym}${fmt0(maxProfit(p))}</div></div>
+        <div class="m"><div class="mk">${dual('占用现金','Cash Secured')}</div><div class="mv">${sym}${fmt0(capital(p))}</div></div>
+        <div class="m"><div class="mk">${dual('日 Theta','Daily Theta')}</div><div class="mv ${th>=0?'pos':'neg'}">${th==null?'—':(th>=0?'+':'')+sym+fmt0(th)}</div></div>
+        <div class="m"><div class="mk">${dual('持有 / 年化','Held / Annualized')}</div><div class="mv">${held==null?'—':held+'d'}<br><span style="color:var(--txt-faint)">${fmtPct(ann,1)}</span></div></div>
+        <div class="m"><div class="mk">${dual('当前 Mark','Current Mark')}</div><div class="mv">${mark==null?'—':sym+fmt(mark,2)}</div></div>
         <div class="m"><div class="mk">Bid / Ask Spread</div><div class="mv" style="font-size:11px">${quoteLine}</div></div>
-        <div class="m"><div class="mk">OTM 缓冲</div><div class="mv ${otm>25?'pos':otm>15?'amber':'neg'}">${otm==null?'—':fmt(otm,1)+'%'}</div></div>
-        <div class="m"><div class="mk">正股 / EOD</div><div class="mv" style="font-size:11px">${p.under?fmt(p.under,2):'—'}<br><span style="color:var(--txt-faint)">${isApiDate(p.underDate)?p.underDate:'API未抓取'}</span></div></div>
-        <div class="m"><div class="mk">到期 / 开仓</div><div class="mv" style="font-size:11px">${p.exp}<br><span style="color:var(--txt-faint)">${p.open||'—'}</span></div></div>
+        <div class="m"><div class="mk">${dual('OTM 缓冲','OTM Buffer')}</div><div class="mv ${otm>25?'pos':otm>15?'amber':'neg'}">${otm==null?'—':fmt(otm,1)+'%'}</div></div>
+        <div class="m"><div class="mk">${dual('正股 / EOD','Underlying / EOD')}</div><div class="mv" style="font-size:11px">${p.under?fmt(p.under,2):'—'}<br><span style="color:var(--txt-faint)">${isApiDate(p.underDate)?p.underDate:L('apiNotFetched')}</span></div></div>
+        <div class="m"><div class="mk">${dual('到期 / 开仓','Expiry / Open')}</div><div class="mv" style="font-size:11px">${p.exp}<br><span style="color:var(--txt-faint)">${p.open||'—'}</span></div></div>
       </div>
 
       <div class="chartwrap">
         <div class="ct">
-          时间价值衰减 <span style="color:var(--txt-faint);font-size:10px">· 拖拽查看每日 / 累计衰减</span>
-          <span class="leg"><i style="background:var(--blue)"></i>当日衰减</span>
-          <span class="leg"><i style="background:var(--mint)"></i>你的利润</span>
-          <span class="leg"><i style="background:var(--amber)"></i>权利金满额</span>
+          ${dual('时间价值衰减','Time Value Decay')} <span style="color:var(--txt-faint);font-size:10px">· ${dual('拖拽查看每日 / 累计衰减','drag to inspect daily / cumulative decay')}</span>
+          <span class="leg"><i style="background:var(--blue)"></i>${dual('当日衰减','Daily decay')}</span>
+          <span class="leg"><i style="background:var(--mint)"></i>${dual('你的利润','Your profit')}</span>
+          <span class="leg"><i style="background:var(--amber)"></i>${dual('权利金满额','Full premium')}</span>
         </div>
         ${decaySVG(p)}
         <div class="readout" id="read_${p.id}"></div>
-        ${!haveModel?'<div class="notewarn">未填正股价/IV，曲线为<b>简化线性衰减</b>占位，衰减读数为均摊值。填入正股价和 IV 可看 Black-Scholes 真实凸形衰减曲线 + 每日 theta。</div>':''}
+        ${!haveModel?`<div class="notewarn">${dual('未填正股价/IV，曲线为<b>简化线性衰减</b>占位，衰减读数为均摊值。填入正股价和 IV 可看 Black-Scholes 真实凸形衰减曲线 + 每日 theta。','Underlying/IV is missing, so this uses a <b>simplified linear decay</b> placeholder. Add underlying and IV for a Black-Scholes decay curve and daily theta.')}</div>`:''}
       </div>
 
       <div class="markrow">
-        <div class="field"><label>更新当前 Mark（券商报价）</label><input class="mono" type="number" step="any" id="mk_${p.id}" value="${p.mark!=null?p.mark:''}" placeholder="${mark!=null?fmt(mark,2):'输入实时报价'}"></div>
-        <button class="mini" onclick="saveMark('${p.id}')">保存 Mark</button>
-        <button class="mini" onclick="refreshOptionQuote('${p.id}')">抓取期权报价</button>
-        <button class="mini" onclick="refreshEod('${p.id}')">抓取 EOD</button>
-        ${haveModel?`<button class="mini" onclick="updUnder('${p.id}')">更新正股/IV</button>`:''}
+        <div class="field"><label>${dual('更新当前 Mark（券商报价）','Update Current Mark')}</label><input class="mono" type="number" step="any" id="mk_${p.id}" value="${p.mark!=null?p.mark:''}" placeholder="${mark!=null?fmt(mark,2):dual('输入实时报价','Enter live quote')}"></div>
+        <button class="mini" onclick="saveMark('${p.id}')">${L('saveMark')}</button>
+        <button class="mini" onclick="refreshOptionQuote('${p.id}')">${L('fetchQuote')}</button>
+        <button class="mini" onclick="refreshEod('${p.id}')">${L('fetchEod')}</button>
+        ${haveModel?`<button class="mini" onclick="updUnder('${p.id}')">${L('updateUnderIv')}</button>`:''}
       </div>
       <div class="eod-status" id="eod_${p.id}"></div>
       <div style="display:flex;justify-content:space-between;align-items:center">
-        <span class="hint">提示：DTE≤21 或 OTM 缓冲收窄时，gamma 升温，关注是否平仓/展期。Sell Call 可能需要正股覆盖或额外保证金。</span>
+        <span></span>
         <span style="display:flex;gap:8px">
-          <button class="closebtn" onclick="closePosition('${p.id}')">平仓</button>
-          <button class="del" onclick="del('${p.id}')">删除仓位</button>
+          <button class="closebtn" onclick="closePosition('${p.id}')">${L('closePosition')}</button>
+          <button class="del" onclick="del('${p.id}')">${L('deletePosition')}</button>
         </span>
       </div>
     </div>
@@ -874,7 +1096,7 @@ function render(){
   renderSummary();
   $('posCount').textContent = POS.length? POS.length+' open':'';
   if(!POS.length){
-    $('posList').innerHTML = `<div class="empty"><div class="big">还没有仓位</div>在左侧填入你的第一个卖出期权，比如 QQQ 633P 或 720C。</div>`;
+    $('posList').innerHTML = `<div class="empty"><div class="big">${L('noPositionsTitle')}</div>${L('noPositionsBody')}</div>`;
     return;
   }
   // sort by DTE ascending
@@ -920,14 +1142,14 @@ function historyDetail(t){
       ${historyTimeline(t)}
       <div class="metrics">
         <div class="m"><div class="mk">Premium Capture</div><div class="mv ${capture>=0?'pos':'neg'}">${fmtPct(capture,1)}</div></div>
-        <div class="m"><div class="mk">已实现 P/L</div><div class="mv ${pl>=0?'pos':'neg'}">${pl>=0?'+':''}${sym}${fmt0(pl)}</div></div>
-        <div class="m"><div class="mk">年化</div><div class="mv ${ann>=0?'pos':'neg'}">${fmtPct(ann,1)}</div></div>
-        <div class="m"><div class="mk">持有 / 总周期</div><div class="mv">${held==null?'—':held+'d'}<br><span style="color:var(--txt-faint)">${total==null?'—':total+'d'}</span></div></div>
-        <div class="m"><div class="mk">平仓至到期</div><div class="mv">${rem==null?'—':rem+'d'}</div></div>
-        <div class="m"><div class="mk">占用资金</div><div class="mv">${sym}${fmt0(cap)}</div></div>
+        <div class="m"><div class="mk">${dual('已实现 P/L','Realized P/L')}</div><div class="mv ${pl>=0?'pos':'neg'}">${pl>=0?'+':''}${sym}${fmt0(pl)}</div></div>
+        <div class="m"><div class="mk">${dual('年化','Annualized')}</div><div class="mv ${ann>=0?'pos':'neg'}">${fmtPct(ann,1)}</div></div>
+        <div class="m"><div class="mk">${dual('持有 / 总周期','Held / Total Life')}</div><div class="mv">${held==null?'—':held+'d'}<br><span style="color:var(--txt-faint)">${total==null?'—':total+'d'}</span></div></div>
+        <div class="m"><div class="mk">${dual('平仓至到期','Close to Expiry')}</div><div class="mv">${rem==null?'—':rem+'d'}</div></div>
+        <div class="m"><div class="mk">${dual('占用资金','Capital')}</div><div class="mv">${sym}${fmt0(cap)}</div></div>
       </div>
       <div style="display:flex;justify-content:flex-end;margin-top:12px">
-        <button class="del" onclick="delHistory('${t.id}')">删除交易</button>
+        <button class="del" onclick="delHistory('${t.id}')">${dual('删除交易','Delete Trade')}</button>
       </div>
     </td></tr>`;
 }
@@ -940,7 +1162,7 @@ function historyRow(t){
   const selected = histOpenIds.has(t.id);
   return `
     <tr>
-      <td class="ctl"><button class="iconbtn" title="${selected?'收起':'展开'}" onclick="toggleHistory('${t.id}')">${selected?'▾':'▸'}</button></td>
+      <td class="ctl"><button class="iconbtn" title="${selected?L('collapse'):L('expand')}" onclick="toggleHistory('${t.id}')">${selected?'▾':'▸'}</button></td>
       <td><b>${t.ticker}</b><br><span class="mono">${optLabel(t)} ${sym}${fmt(t.strike,0)}${optCode(t)}</span></td>
       <td>${t.open||'—'}<br><span class="mono">${t.close||'—'}</span></td>
       <td class="mono">${held==null?'—':held+'d'}</td>
@@ -951,18 +1173,18 @@ function historyRow(t){
       <td class="mono" style="color:${ann>=0?'var(--mint)':'var(--red)'}">${fmtPct(ann,1)}</td>
       <td class="mono">${fmtPct(capture,1)}</td>
       <td>${t.notes||''}</td>
-      <td class="ctl"><button class="iconbtn" title="编辑" onclick="editHistory('${t.id}')">✎</button></td>
+      <td class="ctl"><button class="iconbtn" title="${dual('编辑','Edit')}" onclick="editHistory('${t.id}')">✎</button></td>
     </tr>${selected?historyDetail(t):''}`;
 }
 function renderHistory(){
   $('historyCount').textContent = HISTORY.length ? HISTORY.length+' closed' : '';
   if(!HISTORY.length){
-    $('historyList').innerHTML = `<div class="empty"><div class="big">还没有历史交易</div>从当前持仓平仓，或在左侧手动录入。</div>`;
+    $('historyList').innerHTML = `<div class="empty"><div class="big">${L('noHistoryTitle')}</div>${L('noHistoryBody')}</div>`;
     return;
   }
   const rows = [...HISTORY].sort((a,b)=>(b.close||'').localeCompare(a.close||'')).map(historyRow).join('');
   $('historyList').innerHTML = `<table class="table">
-    <thead><tr><th class="ctl"></th><th>合约</th><th>开仓/平仓</th><th>持有</th><th>到期</th><th>权利金/平仓</th><th>数量</th><th>P/L</th><th>年化</th><th>捕获</th><th>备注</th><th class="ctl"></th></tr></thead>
+    <thead><tr><th class="ctl"></th><th>${dual('合约','Contract')}</th><th>${dual('开仓/平仓','Open / Close')}</th><th>${dual('持有','Held')}</th><th>${dual('到期','Expiry')}</th><th>${dual('权利金/平仓','Credit / Debit')}</th><th>${dual('数量','Qty')}</th><th>P/L</th><th>${dual('年化','Ann.')}</th><th>${dual('捕获','Capture')}</th><th>${dual('备注','Notes')}</th><th class="ctl"></th></tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
 }
@@ -997,11 +1219,11 @@ function wireCharts(){
       const ds=dt.toISOString().slice(0,10);
       const rem=d.total-day;
       read.innerHTML=`
-        <div class="rd"><span>${scrub?'<span class="scrubtag">◆ 游标</span>':'今天'} · 第 ${day} / ${d.total} 天</span><span>${ds} · 剩 ${rem}d</span></div>
-        <div class="rc"><div class="rk">期权价值/张</div><div class="rv">${d.sym}${d.v[day].toFixed(2)}</div></div>
-        <div class="rc"><div class="rk">当日衰减</div><div class="rv ${cls(dayDecay(day))}">${m(dayDecay(day))}</div></div>
-        <div class="rc"><div class="rk">累计衰减</div><div class="rv ${cls(cumDecay(day))}">${m(cumDecay(day))}</div></div>
-        <div class="rc"><div class="rk">浮动盈亏</div><div class="rv ${cls(profit(day))}">${m(profit(day))}</div></div>`;
+        <div class="rd"><span>${scrub?`<span class="scrubtag">◆ ${dual('游标','Cursor')}</span>`:dual('今天','Today')} · ${dual('第','Day')} ${day} / ${d.total}</span><span>${ds} · ${dual('剩','Remaining')} ${rem}d</span></div>
+        <div class="rc"><div class="rk">${dual('期权价值/张','Option Value / Contract')}</div><div class="rv">${d.sym}${d.v[day].toFixed(2)}</div></div>
+        <div class="rc"><div class="rk">${dual('当日衰减','Daily Decay')}</div><div class="rv ${cls(dayDecay(day))}">${m(dayDecay(day))}</div></div>
+        <div class="rc"><div class="rk">${dual('累计衰减','Cumulative Decay')}</div><div class="rv ${cls(cumDecay(day))}">${m(cumDecay(day))}</div></div>
+        <div class="rc"><div class="rk">${dual('浮动盈亏','Unrealized P/L')}</div><div class="rv ${cls(profit(day))}">${m(profit(day))}</div></div>`;
       if(scrub){
         const px=x(day);
         line.setAttribute('x1',px); line.setAttribute('x2',px); line.setAttribute('opacity','.95');
@@ -1089,6 +1311,31 @@ async function fetchOptionQuote(p){
   try{ data = await res.json(); }catch(e){}
   if(!res.ok) throw new Error((data && data.error) || `Option quote failed (${res.status})`);
   return data;
+}
+async function refreshFormIv(){
+  const status = $('formIvStatus');
+  const p = {
+    ticker: ($('f_ticker').value || '').trim().toUpperCase(),
+    exp: $('f_exp').value,
+    strike: +$('f_strike').value,
+    type: $('f_type').value
+  };
+  if(!p.ticker || !p.exp || !p.strike){
+    if(status) status.textContent = L('ivMissingInputs');
+    return;
+  }
+  if(status) status.textContent = L('fetchingIv');
+  try{
+    const q = await fetchOptionQuote(p);
+    if(q.iv==null){
+      if(status) status.textContent = L('ivUnavailable');
+      return;
+    }
+    $('f_iv').value = fmt(+q.iv, 2);
+    if(status) status.textContent = `${L('ivFetched')} ${q.quoteDate || ''}`.trim();
+  }catch(e){
+    if(status) status.textContent = e.message;
+  }
 }
 async function refreshAllOptionQuotes(silent){
   if(!POS.length) return [];
@@ -1218,7 +1465,7 @@ function toggleCard(cardId, btnId, gridId){
   const collapsed = !card.classList.contains('collapsed');
   card.classList.toggle('collapsed', collapsed);
   if(gridId) $(gridId).classList.toggle('form-collapsed', collapsed);
-  btn.textContent = collapsed ? '展开' : '收起';
+  btn.textContent = collapsed ? L('expand') : L('collapse');
 }
 $('toggleNewPositionBtn').onclick = () => toggleCard('newPositionCard', 'toggleNewPositionBtn', 'openGrid');
 $('toggleHistoryFormBtn').onclick = () => toggleCard('historyFormCard', 'toggleHistoryFormBtn', 'historyGrid');
@@ -1255,7 +1502,7 @@ window.refreshOptionQuote = async id => {
 
 $('refreshAllDataBtn').onclick = async () => {
   if(!POS.length){ alert('没有可抓取的持仓'); return; }
-  setFileStatus('正在刷新报价和 EOD...', '');
+  setFileStatus(dual('正在刷新报价和 EOD...','Refreshing quotes and EOD...'), '');
   await refreshAllMarketData(false);
 };
 
@@ -1265,6 +1512,26 @@ function setJsonMenu(open){
   if(menu) menu.classList.toggle('open', jsonMenuOpen);
 }
 
+function setSettings(open){
+  settingsOpen = !!open;
+  const panel = $('settingsPanel');
+  if(panel) panel.classList.toggle('open', settingsOpen);
+}
+
+$('settingsBtn').onclick = e => {
+  e.stopPropagation();
+  setSettings(!settingsOpen);
+};
+$('langZhBtn').onclick = () => { UI.lang = 'zh'; saveUiSettings(); applyUiSettings(); renderAll(); };
+$('langEnBtn').onclick = () => { UI.lang = 'en'; saveUiSettings(); applyUiSettings(); renderAll(); };
+$('themeDarkBtn').onclick = () => { UI.theme = 'dark'; saveUiSettings(); applyUiSettings(); };
+$('themeLightBtn').onclick = () => { UI.theme = 'light'; saveUiSettings(); applyUiSettings(); };
+$('marginRatioInput').onchange = () => {
+  UI.marginRatio = Math.max(1, +$('marginRatioInput').value || 100);
+  saveUiSettings();
+  renderAll();
+};
+
 $('jsonMenuBtn').onclick = e => {
   e.stopPropagation();
   setJsonMenu(!jsonMenuOpen);
@@ -1273,9 +1540,10 @@ $('jsonMenuBtn').onclick = e => {
 document.addEventListener('click', e => {
   const menu = $('jsonMenu');
   const wrap = menu && menu.parentElement;
-  if(!menu || !wrap) return;
-  if(wrap.contains(e.target)) return;
-  setJsonMenu(false);
+  const settings = $('settingsPanel');
+  const settingsWrap = settings && settings.parentElement;
+  if(menu && wrap && !wrap.contains(e.target)) setJsonMenu(false);
+  if(settings && settingsWrap && !settingsWrap.contains(e.target)) setSettings(false);
 });
 
 $('bindFileBtn').onclick = async () => {
@@ -1304,6 +1572,7 @@ $('f_ticker').addEventListener('keydown', e => {
 $('f_under').addEventListener('input', () => {
   formUnderDate = '';
 });
+$('fetchFormIvBtn').onclick = refreshFormIv;
 
 $('loadFileBtn').onclick = async () => {
   setJsonMenu(false);
@@ -1388,6 +1657,7 @@ $('addBtn').onclick = async () => {
   $('f_exp').value = defaultExpiryStr();
   formUnderDate = '';
   $('formEodStatus').textContent = '';
+  $('formIvStatus').textContent = '';
   renderAll();
 };
 
@@ -1467,6 +1737,8 @@ window.editHistory = async id => {
 
 //=================== init ===================
 (async ()=>{
+  loadUiSettings();
+  applyUiSettings();
   $('f_open').value = todayStr();
   $('f_exp').value = defaultExpiryStr();
   $('h_open').value = todayStr();
@@ -1476,21 +1748,21 @@ window.editHistory = async id => {
     POS = restored.positions;
     HISTORY = restored.history || [];
     await Store.save({ positions: POS, history: HISTORY });
-    setFileStatus(`已读取 ${FileStore.name}`, 'ok');
+    setFileStatus(dual(`已读取 ${FileStore.name}`, `Loaded ${FileStore.name}`), 'ok');
   }else{
     const loaded = await Store.load();
     POS = loaded.positions;
     HISTORY = loaded.history || [];
-    setFileStatus(FileStore.supported ? '本地已保存 · 未绑定 JSON' : '本地已保存 · 浏览器不支持直写 JSON', '');
+    setFileStatus(FileStore.supported ? dual('本地已保存 · 未绑定 JSON','Saved locally · JSON not bound') : dual('本地已保存 · 浏览器不支持直写 JSON','Saved locally · direct JSON write unsupported'), '');
   }
   renderAll();
   if(POS.length){
-    setFileStatus('正在自动刷新期权报价...', '');
+    setFileStatus(dual('正在自动刷新期权报价...','Auto-refreshing option quotes...'), '');
     refreshAllOptionQuotes(true).then(failed=>{
       if(failed.length){
-        setFileStatus(`期权报价部分失败 ${failed.length}/${POS.length}`, 'err');
+        setFileStatus(dual(`期权报价部分失败 ${failed.length}/${POS.length}`, `Option quotes partially failed ${failed.length}/${POS.length}`), 'err');
       }else{
-        setFileStatus('期权报价已自动刷新', 'ok');
+        setFileStatus(dual('期权报价已自动刷新','Option quotes refreshed'), 'ok');
       }
     });
   }
