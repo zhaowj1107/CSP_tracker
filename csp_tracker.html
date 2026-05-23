@@ -1,0 +1,1498 @@
+<!-- CSP Tracker — Cash-Secured Put position & theta decay tool -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
+  :root{
+    --ink:#0b0f14;
+    --panel:#121821;
+    --panel-2:#0e141c;
+    --line:#1f2a37;
+    --line-soft:#172029;
+    --txt:#e6edf3;
+    --txt-dim:#8b9bab;
+    --txt-faint:#5a6b7b;
+    --amber:#f0a93b;
+    --amber-soft:#caa86a;
+    --mint:#3ddc97;
+    --mint-dim:#1f7a55;
+    --red:#ff5f6e;
+    --red-dim:#7a2530;
+    --blue:#5aa9ff;
+    --grid:rgba(255,255,255,.04);
+    --shadow:0 18px 50px rgba(0,0,0,.55);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:
+    radial-gradient(1200px 700px at 80% -10%, rgba(240,169,59,.06), transparent 60%),
+    radial-gradient(1000px 600px at -10% 110%, rgba(61,220,151,.05), transparent 55%),
+    var(--ink);
+    color:var(--txt);font-family:'IBM Plex Sans',sans-serif;}
+  .wrap{max-width:1180px;margin:0 auto;padding:26px 20px 80px}
+  .mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}
+
+  /* Header */
+  header{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;
+    border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:22px;flex-wrap:wrap}
+  h1{font-family:'Fraunces',serif;font-weight:900;font-size:34px;line-height:1;margin:0;letter-spacing:-.5px}
+  h1 .em{color:var(--amber);font-style:italic;font-weight:600}
+  .sub{color:var(--txt-dim);font-size:12.5px;margin-top:7px;letter-spacing:.2px}
+  .tag{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--amber-soft);
+    border:1px solid var(--line);border-radius:999px;padding:5px 11px;letter-spacing:1.5px;text-transform:uppercase}
+  .nav{display:flex;gap:8px;margin:0 0 18px}
+  .navbtn{background:var(--panel-2);border:1px solid var(--line);color:var(--txt-dim);border-radius:8px;
+    padding:9px 13px;font-size:12px;cursor:pointer}
+  .navbtn.active{border-color:var(--amber);color:var(--txt);background:rgba(240,169,59,.1)}
+
+  /* Summary strip */
+  .summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);
+    border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:26px}
+  .scell{background:var(--panel);padding:15px 16px;min-height:82px;display:grid;grid-template-rows:auto 1fr;align-items:end}
+  .scell .k{font-size:10.5px;color:var(--txt-faint);text-transform:uppercase;letter-spacing:1.2px}
+  .scell .v{font-family:'IBM Plex Mono',monospace;font-size:21px;font-weight:600;margin-top:7px;font-variant-numeric:tabular-nums;align-self:end}
+  .scell .v.pos{color:var(--mint)} .scell .v.neg{color:var(--red)}
+
+  /* Layout */
+  .grid{display:grid;grid-template-columns:340px 1fr;gap:22px;align-items:start}
+  @media(max-width:880px){.grid{grid-template-columns:1fr}.summary{grid-template-columns:repeat(2,1fr)}}
+  @media(min-width:881px){.summary{grid-template-columns:repeat(7,minmax(0,1fr))}}
+  @media(min-width:881px){
+    .grid.form-collapsed{grid-template-columns:72px 1fr}
+    .form-card.collapsed .head{min-height:260px;padding:12px 10px;align-items:center;justify-content:space-between;flex-direction:column}
+    .form-card.collapsed .head .t{writing-mode:vertical-rl;text-orientation:mixed;font-size:14px;line-height:1.2}
+    .form-card.collapsed .head .ghost{padding:8px 6px}
+  }
+
+  .card{background:linear-gradient(180deg,var(--panel),var(--panel-2));
+    border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+  .card .head{padding:15px 18px;border-bottom:1px solid var(--line-soft);
+    display:flex;align-items:center;justify-content:space-between}
+  .card .head .t{font-family:'Fraunces',serif;font-weight:600;font-size:17px}
+  .card .body{padding:18px}
+  .card.collapsed .body{display:none}
+  .card.collapsed .head{border-bottom:none}
+
+  /* Form */
+  label{display:block;font-size:11px;color:var(--txt-dim);text-transform:uppercase;letter-spacing:.8px;margin:0 0 6px}
+  .field{margin-bottom:13px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  input,select{width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--txt);
+    border-radius:9px;padding:10px 11px;font-family:'IBM Plex Mono',monospace;font-size:13.5px;outline:none}
+  input:focus,select:focus{border-color:var(--amber);box-shadow:0 0 0 3px rgba(240,169,59,.12)}
+  .opt-head{font-size:10.5px;color:var(--txt-faint);letter-spacing:1px;text-transform:uppercase;
+    margin:18px 0 12px;padding-top:14px;border-top:1px dashed var(--line);display:flex;gap:8px;align-items:center}
+  .btn{width:100%;background:linear-gradient(180deg,var(--amber),#d9941f);color:#1a1205;border:none;
+    border-radius:10px;padding:13px;font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:14px;
+    cursor:pointer;letter-spacing:.3px;transition:transform .08s,filter .15s}
+  .btn:hover{filter:brightness(1.06)} .btn:active{transform:translateY(1px)}
+  .hint{font-size:10.5px;color:var(--txt-faint);margin-top:5px;line-height:1.4}
+  .tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+  .toolstack{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+  .toolhint{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--txt-faint);line-height:1.2;text-align:right;white-space:normal;max-width:180px}
+  .menuwrap{position:relative}
+  .menupanel{position:absolute;right:0;top:calc(100% + 6px);min-width:132px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:6px;display:none;z-index:30}
+  .menupanel.open{display:block}
+  .menupanel button{width:100%;text-align:left;margin:0 0 4px}
+  .menupanel button:last-child{margin-bottom:0}
+  .ghost{background:var(--line-soft);border:1px solid var(--line);color:var(--txt-dim);border-radius:8px;
+    padding:7px 10px;font-size:11.5px;cursor:pointer;white-space:nowrap}
+  .ghost:hover{color:var(--txt);border-color:var(--amber)}
+  .file-status{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--txt-faint);white-space:nowrap}
+  .file-status.ok{color:var(--mint)}
+  .file-status.err{color:var(--red)}
+  .eod-status{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--blue);white-space:nowrap}
+
+  /* Positions */
+  .empty{padding:50px 20px;text-align:center;color:var(--txt-faint);font-size:13px}
+  .empty .big{font-family:'Fraunces',serif;font-style:italic;font-size:19px;color:var(--txt-dim);margin-bottom:6px}
+
+  .pos{border:1px solid var(--line);border-radius:14px;margin-bottom:14px;overflow:hidden;background:var(--panel-2)}
+  .pos.sel{border-color:var(--amber)}
+  .pos .ph{display:flex;align-items:center;gap:12px;padding:13px 15px;cursor:pointer;
+    background:linear-gradient(180deg,rgba(255,255,255,.02),transparent)}
+  .pos .ticker{font-family:'Fraunces',serif;font-weight:900;font-size:18px;letter-spacing:-.3px}
+  .pos .strike{font-family:'IBM Plex Mono',monospace;color:var(--amber-soft);font-size:13px}
+  .pill{font-family:'IBM Plex Mono',monospace;font-size:10.5px;padding:3px 8px;border-radius:6px;letter-spacing:.5px}
+  .pill.dte{background:rgba(90,169,255,.13);color:var(--blue)}
+  .pill.dte.warn{background:rgba(240,169,59,.15);color:var(--amber)}
+  .pill.dte.crit{background:rgba(255,95,110,.15);color:var(--red)}
+  .pill.iv{background:rgba(255,255,255,.06);color:var(--txt-dim)}
+  .pill.otm{background:rgba(61,220,151,.1);color:var(--mint)}
+  .pill.otm.warn{background:rgba(240,169,59,.15);color:var(--amber)}
+  .pill.otm.crit{background:rgba(255,95,110,.15);color:var(--red)}
+  .pos .pl{margin-left:auto;text-align:right;font-family:'IBM Plex Mono',monospace}
+  .pos .pl .amt{font-size:16px;font-weight:600} .pos .pl .pct{font-size:10.5px;color:var(--txt-faint)}
+  .pos .amt.pos{color:var(--mint)} .pos .amt.neg{color:var(--red)}
+
+  .pdetail{padding:0 15px;max-height:0;overflow:hidden;transition:max-height .3s ease,padding .3s ease}
+  .pos.sel .pdetail{max-height:760px;padding:4px 15px 16px}
+  .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line-soft);
+    border:1px solid var(--line-soft);border-radius:10px;overflow:hidden;margin:8px 0 14px}
+  .m{background:var(--panel);padding:10px 11px}
+  .m .mk{font-size:9.5px;color:var(--txt-faint);text-transform:uppercase;letter-spacing:.8px}
+  .m .mv{font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:500;margin-top:4px}
+  .m .mv.pos{color:var(--mint)} .m .mv.neg{color:var(--red)} .m .mv.amber{color:var(--amber)}
+
+  .markrow{display:flex;gap:9px;align-items:flex-end;margin-bottom:12px}
+  .markrow .field{flex:1;margin:0}
+  .mini{background:var(--line-soft);border:1px solid var(--line);color:var(--txt-dim);border-radius:8px;
+    padding:9px 12px;font-size:12px;cursor:pointer;white-space:nowrap}
+  .mini:hover{color:var(--txt);border-color:var(--amber)}
+  .del{color:var(--red);background:none;border:1px solid var(--red-dim);border-radius:8px;
+    padding:7px 13px;font-size:11.5px;cursor:pointer;letter-spacing:.5px}
+  .del:hover{background:rgba(255,95,110,.1)}
+  .closebtn{color:var(--mint);background:none;border:1px solid var(--mint-dim);border-radius:8px;
+    padding:7px 13px;font-size:11.5px;cursor:pointer;letter-spacing:.5px}
+  .closebtn:hover{background:rgba(61,220,151,.1)}
+  .iconbtn{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;
+    background:transparent;border:1px solid transparent;border-radius:7px;color:var(--txt-dim);
+    cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:15px;line-height:1}
+  .iconbtn:hover{color:var(--txt);border-color:var(--line);background:var(--line-soft)}
+  .iconbtn.danger:hover{color:var(--red);border-color:var(--red-dim);background:rgba(255,95,110,.1)}
+  .table .ctl{width:34px;text-align:center;padding-left:6px;padding-right:6px}
+  .table{width:100%;border-collapse:collapse;font-size:12px}
+  .table th,.table td{border-bottom:1px solid var(--line-soft);padding:10px 8px;text-align:left;vertical-align:top}
+  .table th{color:var(--txt-faint);font-size:10px;text-transform:uppercase;letter-spacing:.8px}
+  .table td{color:var(--txt-dim)}
+  .hdetail td{background:var(--panel-2);padding:14px 16px}
+  .timeline{position:relative;height:54px;margin:10px 4px 4px}
+  .timeline:before{content:"";position:absolute;left:0;right:0;top:23px;height:2px;background:var(--line)}
+  .tpoint{position:absolute;top:10px;transform:translateX(-50%);min-width:78px;text-align:center}
+  .tpoint i{display:block;width:12px;height:12px;border-radius:50%;background:var(--blue);border:2px solid var(--panel-2);margin:7px auto 4px}
+  .tpoint.open{left:0;transform:none;text-align:left}.tpoint.open i{margin-left:0}
+  .tpoint.exp{right:0;left:auto;transform:none;text-align:right}.tpoint.exp i{margin-right:0}
+  .tpoint.close i{background:var(--mint)}
+  .tlabel{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--txt-faint)}
+  .page{display:block}
+  .page.hide{display:none}
+
+  .chartwrap{margin:6px 0 10px}
+  .chartwrap .ct{font-size:11px;color:var(--txt-dim);margin-bottom:6px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .leg{display:inline-flex;align-items:center;gap:5px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--txt-faint)}
+  .leg i{width:13px;height:3px;border-radius:2px;display:inline-block}
+  svg{display:block;width:100%;height:auto;touch-action:none}
+  .csp-chart .scrub-hit{cursor:crosshair}
+  .scrub-line,.scrub-p{transition:opacity .1s;pointer-events:none}
+  .readout{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line-soft);
+    border:1px solid var(--line-soft);border-radius:10px;overflow:hidden;margin-top:9px;
+    font-family:'IBM Plex Mono',monospace;user-select:none}
+  .readout .rd{grid-column:1/-1;background:var(--panel-2);padding:6px 11px;font-size:10.5px;
+    color:var(--amber-soft);display:flex;justify-content:space-between;align-items:center}
+  .readout .rd .scrubtag{color:var(--blue)}
+  .readout .rc{background:var(--panel);padding:8px 10px}
+  .readout .rc .rk{font-size:9px;color:var(--txt-faint);letter-spacing:.4px;text-transform:uppercase}
+  .readout .rc .rv{font-size:13px;font-weight:500;margin-top:4px;font-variant-numeric:tabular-nums}
+  .readout .rc .rv.pos{color:var(--mint)} .readout .rc .rv.neg{color:var(--red)}
+  @media(max-width:560px){.readout{grid-template-columns:repeat(2,1fr)}}
+  .notewarn{font-size:10.5px;color:var(--amber-soft);background:rgba(240,169,59,.07);
+    border:1px solid rgba(240,169,59,.2);border-radius:8px;padding:8px 10px;margin-top:4px;line-height:1.5}
+  footer{margin-top:30px;color:var(--txt-faint);font-size:11px;text-align:center;line-height:1.7}
+  .disc{max-width:720px;margin:14px auto 0;font-size:10.5px;color:var(--txt-faint);
+    border-top:1px solid var(--line-soft);padding-top:14px;line-height:1.6}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Option <span class="em">Tracker</span></h1>
+      <div class="sub">卖出 Put / Call · 权利金 / 到期 / 每日时间价值衰减追踪</div>
+    </div>
+    <div class="tag">Theta Decay Terminal</div>
+  </header>
+
+  <div class="nav">
+    <button class="navbtn active" id="openPageBtn">当前持仓</button>
+    <button class="navbtn" id="historyPageBtn">历史交易</button>
+  </div>
+
+  <section class="page" id="openPage">
+  <div class="summary" id="summary"></div>
+
+  <div class="grid" id="openGrid">
+    <!-- LEFT: Add form -->
+    <div class="card form-card" id="newPositionCard">
+      <div class="head"><div class="t">新建仓位 / New Position</div><button class="ghost" id="toggleNewPositionBtn">收起</button></div>
+      <div class="body">
+        <div class="row2">
+          <div class="field"><label>标的 Ticker</label><input id="f_ticker" placeholder="QQQ" autocomplete="off"><div class="eod-status" id="formEodStatus"></div></div>
+          <div class="field"><label>类型 Type</label>
+            <select id="f_type"><option value="put">Sell Put</option><option value="call">Sell Call</option></select>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>币种 Ccy</label>
+            <select id="f_ccy"><option>USD</option><option>EUR</option><option>HKD</option><option>CNY</option><option>GBP</option></select>
+          </div>
+          <div class="field"><label>Strike</label><input id="f_strike" class="mono" type="number" step="any" placeholder="633"></div>
+        </div>
+        <div class="field"><label>到期日 Expiry</label><input id="f_exp" type="date"></div>
+        <div class="row2">
+          <div class="field"><label>权利金/张 Premium</label><input id="f_prem" class="mono" type="number" step="any" placeholder="5.40"></div>
+          <div class="field"><label>开仓日 Open</label><input id="f_open" type="date"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>张数 Contracts</label><input id="f_qty" class="mono" type="number" step="1" value="1"></div>
+          <div class="field"><label>乘数 Mult</label><input id="f_mult" class="mono" type="number" step="1" value="100"></div>
+        </div>
+
+        <div class="opt-head">⚙ 可选 · 用于 Black-Scholes 衰减建模</div>
+        <div class="row2">
+          <div class="field"><label>正股价 Underlying</label><input id="f_under" class="mono" type="number" step="any" placeholder="自动抓取 EOD"></div>
+          <div class="field"><label>IV %</label><input id="f_iv" class="mono" type="number" step="any" placeholder="48"></div>
+        </div>
+        <div class="field"><label>无风险利率 r %</label><input id="f_rate" class="mono" type="number" step="any" value="4.2"></div>
+        <div class="hint">填了正股价 + IV，工具会用 Black-Scholes 画出每日时间价值衰减曲线并估算日 theta。不填也能用，只追踪 DTE 和你手动更新的 mark。</div>
+
+        <div style="height:6px"></div>
+        <button class="btn" id="addBtn">+ 添加仓位</button>
+      </div>
+    </div>
+
+    <!-- RIGHT: Positions -->
+    <div class="card">
+        <div class="head">
+        <div class="t">持仓 / Positions</div>
+        <div class="tools">
+          <div class="mono" style="font-size:11px;color:var(--txt-faint)" id="posCount"></div>
+          <span class="file-status" id="fileStatus">未绑定 JSON</span>
+          <div class="toolstack">
+            <button class="ghost" id="refreshAllDataBtn">批量刷新报价 / EOD</button>
+            <div class="toolhint" id="refreshDataStatus">最新更新：—</div>
+          </div>
+          <div class="menuwrap">
+            <button class="ghost" id="jsonMenuBtn">JSON</button>
+            <div class="menupanel" id="jsonMenu">
+              <button class="ghost" id="bindFileBtn">绑定</button>
+              <button class="ghost" id="loadFileBtn">读取</button>
+              <button class="ghost" id="exportBtn">导出</button>
+              <button class="ghost" id="importBtn">导入</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="body" id="posList"></div>
+    </div>
+  </div>
+  </section>
+
+  <section class="page hide" id="historyPage">
+    <div class="grid form-collapsed" id="historyGrid">
+      <div class="card form-card collapsed" id="historyFormCard">
+        <div class="head"><div class="t">录入历史交易 / Closed Trade</div><button class="ghost" id="toggleHistoryFormBtn">展开</button></div>
+        <div class="body">
+          <div class="row2">
+            <div class="field"><label>Ticker</label><input id="h_ticker" placeholder="QQQ" autocomplete="off"></div>
+            <div class="field"><label>类型 Type</label><select id="h_type"><option value="put">Sell Put</option><option value="call">Sell Call</option></select></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>币种 Ccy</label><select id="h_ccy"><option>USD</option><option>EUR</option><option>HKD</option><option>CNY</option><option>GBP</option></select></div>
+            <div class="field"><label>Strike</label><input id="h_strike" class="mono" type="number" step="any"></div>
+          </div>
+          <div class="field"><label>到期日 Expiry</label><input id="h_exp" type="date"></div>
+          <div class="row2">
+            <div class="field"><label>开仓日 Open</label><input id="h_open" type="date"></div>
+            <div class="field"><label>平仓日 Close</label><input id="h_close" type="date"></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>收取权利金/张 Open Credit</label><input id="h_prem" class="mono" type="number" step="any"></div>
+            <div class="field"><label>平仓价格/张 Close Debit</label><input id="h_closePrice" class="mono" type="number" step="any"></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>张数 Contracts</label><input id="h_qty" class="mono" type="number" step="1" value="1"></div>
+            <div class="field"><label>乘数 Mult</label><input id="h_mult" class="mono" type="number" step="1" value="100"></div>
+          </div>
+          <div class="field"><label>备注 Notes</label><input id="h_notes" placeholder="平仓原因 / 调整记录"></div>
+          <button class="btn" id="addHistoryBtn">+ 添加历史交易</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="head"><div class="t">历史 / Closed Trades</div><div class="mono" style="font-size:11px;color:var(--txt-faint)" id="historyCount"></div></div>
+        <div class="body" id="historyList"></div>
+      </div>
+    </div>
+  </section>
+
+  <input id="importFile" type="file" accept="application/json,.json" style="display:none">
+
+  <footer>
+    数据默认保存在浏览器本地；绑定 JSON 后会实时写入所选文件。EOD 正股价格通过本地 Python/yfinance 服务抓取。盈亏按 <span class="mono">已收权利金 − 当前 mark</span> 计算，正值=对卖方有利。
+    <div class="disc">⚠️ 本工具仅用于记录与教学，不构成投资建议。Black-Scholes 衰减为<b>理论估算</b>（假设正股价与 IV 不变、欧式定价），真实期权价格受 IV 变化、skew、流动性、提前行权等影响，会偏离曲线。务必以券商实际报价为准。</div>
+  </footer>
+</div>
+
+<script>
+//=================== storage layer (artifact/local browser, with memory fallback) ===================
+const Store = (() => {
+  const KEY = 'csp_positions_v1';
+  const VERSION = 1;
+  let mem = null;
+  const hasWS = typeof window !== 'undefined' && window.storage && typeof window.storage.get === 'function';
+  const hasLS = typeof window !== 'undefined' && window.localStorage;
+
+  const normalizePositions = data => {
+    const arr = Array.isArray(data) ? data : (data && Array.isArray(data.positions) ? data.positions : []);
+    return arr.filter(p => p && typeof p === 'object').map(p => ({
+      id: p.id || ('p'+Date.now().toString(36)+Math.random().toString(36).slice(2,5)),
+      type: p.type === 'call' ? 'call' : 'put',
+      ticker: (p.ticker || '').toString().trim().toUpperCase(),
+      ccy: p.ccy || 'USD',
+      strike: +p.strike,
+      exp: p.exp || '',
+      prem: +p.prem,
+      open: p.open || todayStr(),
+      qty: Math.max(1, parseInt(p.qty || '1')),
+      mult: Math.max(1, parseInt(p.mult || '100')),
+      under: p.under==null || p.under==='' ? null : +p.under,
+      underDate: p.underDate || '',
+      underFetchedAt: p.underFetchedAt || '',
+      iv: p.iv==null || p.iv==='' ? null : +p.iv,
+      rate: p.rate==null || p.rate==='' ? 0 : +p.rate,
+      mark: p.mark==null || p.mark==='' ? null : +p.mark,
+      quote: p.quote && typeof p.quote === 'object' ? p.quote : null
+    })).filter(p => p.ticker && p.strike && p.exp && p.prem >= 0);
+  };
+  const normalizeHistory = data => {
+    const arr = data && Array.isArray(data.history) ? data.history : [];
+    return arr.filter(t => t && typeof t === 'object').map(t => ({
+      id: t.id || ('h'+Date.now().toString(36)+Math.random().toString(36).slice(2,5)),
+      sourceId: t.sourceId || '',
+      type: t.type === 'call' ? 'call' : 'put',
+      ticker: (t.ticker || '').toString().trim().toUpperCase(),
+      ccy: t.ccy || 'USD',
+      strike: +t.strike,
+      exp: t.exp || '',
+      open: t.open || '',
+      close: t.close || todayStr(),
+      prem: +t.prem,
+      closePrice: t.closePrice==null || t.closePrice==='' ? 0 : +t.closePrice,
+      qty: Math.max(1, parseInt(t.qty || '1')),
+      mult: Math.max(1, parseInt(t.mult || '100')),
+      under: t.under==null || t.under==='' ? null : +t.under,
+      iv: t.iv==null || t.iv==='' ? null : +t.iv,
+      notes: t.notes || ''
+    })).filter(t => t.ticker && t.strike && t.prem >= 0);
+  };
+  const normalize = data => ({ positions: normalizePositions(data), history: normalizeHistory(data) });
+
+  const pack = state => {
+    const data = Array.isArray(state) ? { positions: state, history: [] } : (state || {});
+    return {
+      version: VERSION,
+      savedAt: new Date().toISOString(),
+      positions: normalizePositions(data),
+      history: normalizeHistory(data)
+    };
+  };
+  const readJSON = raw => {
+    try{ return raw ? pack(JSON.parse(raw)) : null; }
+    catch(e){ return null; }
+  };
+
+  return {
+    async load(){
+      if(hasWS){
+        try{
+          const r = await window.storage.get(KEY);
+          const fromWS = readJSON(r && r.value);
+          if(fromWS) return fromWS;
+        }catch(e){}
+      }
+      if(hasLS){
+        const fromLS = readJSON(window.localStorage.getItem(KEY));
+        if(fromLS) return fromLS;
+      }
+      return pack(mem || {});
+    },
+    async save(state){
+      const data = pack(state);
+      mem = data;
+      if(hasLS){ try{ window.localStorage.setItem(KEY, JSON.stringify(data)); }catch(e){} }
+      if(hasWS){ try{ await window.storage.set(KEY, JSON.stringify(data)); }catch(e){} }
+      return data;
+    },
+    normalize,
+    normalizePositions,
+    normalizeHistory,
+    exportBlob(state){
+      return JSON.stringify(pack(state), null, 2);
+    }
+  };
+})();
+
+//=================== optional direct JSON file binding ===================
+const FileStore = (() => {
+  let handle = null;
+  let name = '';
+  const DB = 'csp_tracker_file_db';
+  const STORE = 'handles';
+  const HANDLE_KEY = 'positions_json';
+  const supported = typeof window !== 'undefined' &&
+    typeof window.showOpenFilePicker === 'function' &&
+    typeof window.showSaveFilePicker === 'function' &&
+    typeof window.indexedDB !== 'undefined';
+  const opts = {
+    types: [{ description:'CSP Tracker JSON', accept:{ 'application/json':['.json'] } }],
+    excludeAcceptAllOption:false
+  };
+
+  const dbReq = () => new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(STORE);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+
+  const idbGet = async key => {
+    const db = await dbReq();
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readonly');
+      const req = tx.objectStore(STORE).get(key);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+      tx.oncomplete = () => db.close();
+    });
+  };
+
+  const idbSet = async (key, value) => {
+    const db = await dbReq();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readwrite');
+      tx.objectStore(STORE).put(value, key);
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => reject(tx.error);
+    });
+  };
+
+  const canUseHandle = async fileHandle => {
+    const opts = { mode:'readwrite' };
+    if(typeof fileHandle.queryPermission !== 'function') return true;
+    if(await fileHandle.queryPermission(opts) === 'granted') return true;
+    if(typeof fileHandle.requestPermission === 'function'){
+      return await fileHandle.requestPermission(opts) === 'granted';
+    }
+    return false;
+  };
+
+  const readHandle = async fileHandle => {
+    const file = await fileHandle.getFile();
+    const text = await file.text();
+    return Store.normalize(JSON.parse(text));
+  };
+
+  const writeHandle = async (fileHandle, arr) => {
+    const writable = await fileHandle.createWritable();
+    await writable.write(Store.exportBlob(arr));
+    await writable.close();
+  };
+
+  return {
+    supported,
+    get name(){ return name; },
+    get bound(){ return !!handle; },
+    async bind(arr){
+      if(!supported) throw new Error('当前浏览器不支持直接写入本地 JSON 文件');
+      handle = await window.showSaveFilePicker({
+        ...opts,
+        suggestedName:`csp_positions_${todayStr()}.json`
+      });
+      name = handle.name || 'JSON file';
+      await writeHandle(handle, arr);
+      await idbSet(HANDLE_KEY, handle);
+      return name;
+    },
+    async load(){
+      if(!supported) throw new Error('当前浏览器不支持直接读取本地 JSON 文件');
+      const handles = await window.showOpenFilePicker({ ...opts, multiple:false });
+      const nextHandle = handles[0];
+      const nextName = nextHandle.name || 'JSON file';
+      const positions = await readHandle(nextHandle);
+      return {
+        name: nextName,
+        positions,
+        commit(){
+          handle = nextHandle;
+          name = nextName;
+          idbSet(HANDLE_KEY, handle).catch(()=>{});
+        }
+      };
+    },
+    async restore(){
+      if(!supported) return null;
+      const savedHandle = await idbGet(HANDLE_KEY).catch(()=>null);
+      if(!savedHandle || !(await canUseHandle(savedHandle))) return null;
+      handle = savedHandle;
+      name = handle.name || 'JSON file';
+      return await readHandle(handle);
+    },
+    async save(arr){
+      if(!handle) return false;
+      await writeHandle(handle, arr);
+      return true;
+    }
+  };
+})();
+
+//=================== math: Black-Scholes short options ===================
+function ncdf(x){ // standard normal CDF (Abramowitz-Stegun)
+  const t = 1/(1+0.2316419*Math.abs(x));
+  const d = 0.3989422804014327*Math.exp(-x*x/2);
+  let p = d*t*(0.31938153+t*(-0.356563782+t*(1.781477937+t*(-1.821255978+t*1.330274429))));
+  return x>0 ? 1-p : p;
+}
+function bsPut(S,K,T,r,sig){
+  if(T<=0) return Math.max(K-S,0);
+  if(sig<=0) return Math.max(K-S,0);
+  const sT = sig*Math.sqrt(T);
+  const d1 = (Math.log(S/K)+(r+sig*sig/2)*T)/sT;
+  const d2 = d1 - sT;
+  return K*Math.exp(-r*T)*ncdf(-d2) - S*ncdf(-d1);
+}
+function bsCall(S,K,T,r,sig){
+  if(T<=0) return Math.max(S-K,0);
+  if(sig<=0) return Math.max(S-K,0);
+  const sT = sig*Math.sqrt(T);
+  const d1 = (Math.log(S/K)+(r+sig*sig/2)*T)/sT;
+  const d2 = d1 - sT;
+  return S*ncdf(d1) - K*Math.exp(-r*T)*ncdf(d2);
+}
+function optType(p){ return p.type === 'call' ? 'call' : 'put'; }
+function optCode(p){ return optType(p) === 'call' ? 'C' : 'P'; }
+function optLabel(p){ return optType(p) === 'call' ? 'Sell Call' : 'Sell Put'; }
+function bsOption(p,T){
+  const S=+p.under, K=+p.strike, r=(+p.rate||0)/100, sig=(+p.iv)/100;
+  return optType(p) === 'call' ? bsCall(S,K,T,r,sig) : bsPut(S,K,T,r,sig);
+}
+
+//=================== helpers ===================
+const $ = id => document.getElementById(id);
+const todayStr = () => new Date().toISOString().slice(0,10);
+const defaultExpiryStr = () => {
+  const d = new Date();
+  const day = d.getDate();
+  d.setMonth(d.getMonth()+1);
+  if(d.getDate() !== day) d.setDate(0);
+  return d.toISOString().slice(0,10);
+};
+const dteFrom = (expStr, fromStr) => {
+  const a = new Date(expStr+'T00:00:00'), b = new Date((fromStr||todayStr())+'T00:00:00');
+  return Math.round((a-b)/86400000);
+};
+const ccySym = c => ({USD:'$',EUR:'€',HKD:'HK$',CNY:'¥',GBP:'£'}[c]||'');
+const fmt = (n,d=2)=> (n==null||isNaN(n))?'—':n.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+const fmt0 = n => (n==null||isNaN(n))?'—':Math.round(n).toLocaleString('en-US');
+const fmtPct = (n,d=1)=> (n==null||isNaN(n))?'—':n.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d})+'%';
+
+let POS = [];
+let HISTORY = [];
+let selId = null;
+let lastSaveAt = null;
+let formUnderDate = '';
+let formEodTimer = null;
+let formEodSeq = 0;
+let editingHistoryId = null;
+let histOpenIds = new Set();
+let jsonMenuOpen = false;
+
+function fmtStamp(ts){
+  if(!ts) return '—';
+  const d = new Date(ts);
+  if(isNaN(d)) return '—';
+  return d.toLocaleString('zh-CN', {
+    year:'numeric', month:'2-digit', day:'2-digit',
+    hour:'2-digit', minute:'2-digit'
+  });
+}
+
+function latestDateValue(values){
+  const dates = values.filter(Boolean).sort();
+  return dates.length ? dates[dates.length - 1] : '';
+}
+
+function isApiDate(value){
+  return /^\d{4}-\d{2}-\d{2}$/.test(value || '');
+}
+
+function latestMarketDataDate(){
+  const closeDate = latestDateValue(POS.map(p => isApiDate(p.underDate) ? p.underDate : ''));
+  const quoteDate = latestDateValue(POS.map(p => p.quote && p.quote.quoteDate ? p.quote.quoteDate : ''));
+  return latestDateValue([closeDate, quoteDate]);
+}
+
+function updateRefreshStatus(msg){
+  const el = $('refreshDataStatus');
+  if(!el) return;
+  if(msg){
+    el.textContent = msg;
+    return;
+  }
+  el.textContent = `数据日期：${latestMarketDataDate() || '—'}`;
+}
+
+function setFileStatus(msg, cls){
+  const el = $('fileStatus');
+  if(!el) return;
+  el.textContent = msg;
+  el.className = 'file-status' + (cls ? ' '+cls : '');
+}
+
+async function persistPositions(){
+  const saved = await Store.save({ positions: POS, history: HISTORY });
+  POS = saved.positions;
+  HISTORY = saved.history;
+  lastSaveAt = new Date();
+  if(FileStore.bound){
+    try{
+      await FileStore.save({ positions: POS, history: HISTORY });
+      setFileStatus(`JSON 已同步 ${lastSaveAt.toLocaleTimeString()}`, 'ok');
+    }catch(e){
+      setFileStatus('JSON 写入失败', 'err');
+      alert('JSON 文件写入失败，请重新绑定文件或导出备份。');
+    }
+  }else{
+    setFileStatus(FileStore.supported ? '本地已保存 · 未绑定 JSON' : '本地已保存 · 浏览器不支持直写 JSON', '');
+  }
+  return POS;
+}
+
+//=================== render ===================
+function totalPL(p){ // realized-style unrealized: (prem - mark) * qty * mult
+  const mark = currentMark(p);
+  if(mark==null) return null;
+  return (p.prem - mark) * p.qty * p.mult;
+}
+function currentMark(p){
+  if(p.quote && p.quote.mid!=null && p.quote.mid!=='') return +p.quote.mid;
+  if(p.mark!=null && p.mark!=='') return +p.mark;
+  return modelMark(p);
+}
+function modelMark(p){ // theoretical current option value via BS, if inputs present
+  if(p.under==null||p.iv==null||p.under===''||p.iv==='') return null;
+  const T = Math.max(dteFrom(p.exp), 0)/365;
+  return bsOption(p, T);
+}
+function maxProfit(p){ return p.prem*p.qty*p.mult; }
+function capital(p){
+  const px = optType(p) === 'call' && p.under ? +p.under : +p.strike;
+  return px*p.qty*p.mult;
+}
+function holdingDays(openStr, closeStr){
+  if(!openStr) return null;
+  const d = Math.max(0, dteFrom(closeStr || todayStr(), openStr));
+  return d;
+}
+function annualizedFromReturn(retPct, days){
+  if(retPct==null || isNaN(retPct) || days==null) return null;
+  return days > 0 ? retPct * 365 / days : null;
+}
+function positionAnnualized(p){
+  const pl = totalPL(p);
+  const cap = capital(p);
+  const days = holdingDays(p.open);
+  if(pl==null || !cap || !days) return null;
+  return annualizedFromReturn(pl / cap * 100, days);
+}
+function otmPct(p){
+  if(!p.under) return null;
+  const S=+p.under, K=+p.strike;
+  return optType(p) === 'call' ? (K-S)/S*100 : (S-K)/S*100;
+}
+function dailyTheta(p){
+  if(p.under==null||p.iv==null||p.under===''||p.iv==='') return null;
+  const T = Math.max(dteFrom(p.exp),0)/365;
+  if(T<=0) return 0;
+  const v0 = bsOption(p,T);
+  const v1 = bsOption(p,Math.max(T-1/365,0));
+  return (v0-v1)*p.qty*p.mult; // positive = short option gains per day
+}
+
+function renderSummary(){
+  let collected=0, unreal=0, cap=0, theta=0, annualPremium=0, thetaKnown=false;
+  POS.forEach(p=>{
+    const premium = maxProfit(p);
+    const cash = capital(p);
+    const totalDays = Math.max(dteFrom(p.exp, p.open||todayStr()), 1);
+    collected += premium;
+    cap += cash;
+    annualPremium += premium * 365 / totalDays;
+    const pl = totalPL(p); if(pl!=null) unreal+=pl;
+    const th = dailyTheta(p); if(th!=null){ theta+=th; thetaKnown=true; }
+  });
+  const ccy = POS.length? ccySym(POS[0].ccy):'$';
+  const yieldPct = cap ? collected / cap * 100 : null;
+  const annualYieldPct = cap ? annualPremium / cap * 100 : null;
+  $('summary').innerHTML = `
+    <div class="scell"><div class="k">持仓数 Positions</div><div class="v">${POS.length}</div></div>
+    <div class="scell"><div class="k">总权利金 Max Premium</div><div class="v">${ccy}${fmt0(collected)}</div></div>
+    <div class="scell"><div class="k">收益率 Yield</div><div class="v">${fmtPct(yieldPct)}</div></div>
+    <div class="scell"><div class="k">年化收益率 Annualized</div><div class="v">${fmtPct(annualYieldPct)}</div></div>
+    <div class="scell"><div class="k">当前未实现 Unrealized</div><div class="v ${unreal>=0?'pos':'neg'}">${ccy}${fmt0(unreal)}</div></div>
+    <div class="scell"><div class="k">日均 Theta /day</div><div class="v ${theta>=0?'pos':'neg'}">${thetaKnown?ccy+fmt0(theta):'—'}</div></div>
+    <div class="scell"><div class="k">占用资金 Cash Secured</div><div class="v" style="color:var(--amber)">${ccy}${fmt0(cap)}</div></div>`;
+}
+
+function decaySVG(p){
+  const W=560,H=170,padL=8,padR=8,padT=10,padB=22;
+  const open = p.open||todayStr();
+  const totalDays = Math.max(dteFrom(p.exp, open),1);
+  const elapsed = Math.min(Math.max(dteFrom(todayStr(), open),0), totalDays);
+  const prem = p.prem;
+  const haveModel = !(p.under==null||p.iv==null||p.under===''||p.iv==='');
+  // build option value series over life
+  let pts=[];
+  for(let d=0; d<=totalDays; d++){
+    const Trem = (totalDays-d)/365;
+    let val;
+    if(haveModel) val = bsOption(p,Trem);
+    else val = prem*(Trem/(totalDays/365)); // naive linear time-value decay
+    pts.push(val);
+  }
+  const decays = pts.map((v,i)=>i===0?0:(pts[i-1]-v)*p.mult*p.qty);
+  const maxDecay = Math.max(...decays.map(v=>Math.abs(v)), 1);
+  const maxV = Math.max(prem, ...pts)*1.08;
+  const x = i => padL + (W-padL-padR)*(i/totalDays);
+  const y = v => padT + (H-padT-padB)*(1 - v/maxV);
+  const profPath = pts.map((v,i)=>`${i===0?'M':'L'}${x(i).toFixed(1)},${y(Math.max(prem-v,0)).toFixed(1)}`).join(' ');
+  const barW = Math.max(.8, (W-padL-padR)/totalDays*.72);
+  const bars = decays.slice(1).map((v,i)=>{
+    const h = Math.abs(v)/maxDecay*(H-padT-padB)*.55;
+    const bx = x(i+.5)-barW/2;
+    const by = H-padB-h;
+    const fill = v>=0?'var(--blue)':'var(--red)';
+    return `<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="1.5" fill="${fill}" opacity=".34"/>`;
+  }).join('');
+  const premY = y(prem);
+  // today marker
+  const tx = x(elapsed);
+  const curVal = pts[Math.min(elapsed,pts.length-1)];
+  // data embedded for the interactive scrubber (read by wireCharts)
+  const series = JSON.stringify({
+    v: pts.map(v=>+v.toFixed(4)), prem:+prem, total:totalDays, elapsed,
+    maxV:+maxV.toFixed(4), padL, padR, padT, padB, W, H,
+    mult:p.mult, qty:p.qty, sym:ccySym(p.ccy), open
+  });
+  return `
+  <svg class="csp-chart" id="chart_${p.id}" data-pid="${p.id}" data-series='${series}' viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+    ${[0,.25,.5,.75,1].map(f=>`<line x1="${padL}" x2="${W-padR}" y1="${padT+(H-padT-padB)*f}" y2="${padT+(H-padT-padB)*f}" stroke="var(--grid)"/>`).join('')}
+    ${bars}
+    <line x1="${padL}" x2="${W-padR}" y1="${premY}" y2="${premY}" stroke="var(--amber)" stroke-dasharray="4 4" stroke-width="1" opacity=".7"/>
+    <path d="${profPath}" fill="none" stroke="var(--mint)" stroke-width="2"/>
+    <line x1="${tx}" x2="${tx}" y1="${padT}" y2="${H-padB}" stroke="var(--blue)" stroke-width="1" stroke-dasharray="2 3" opacity=".55"/>
+    <text x="${padL+2}" y="${H-7}" fill="var(--txt-faint)" font-size="9" font-family="IBM Plex Mono">开仓</text>
+    <text x="${W-padR-2}" y="${H-7}" fill="var(--txt-faint)" font-size="9" font-family="IBM Plex Mono" text-anchor="end">到期</text>
+    <text x="${Math.min(Math.max(tx,16),W-16)}" y="${H-7}" fill="var(--blue)" font-size="9" font-family="IBM Plex Mono" text-anchor="middle">今天</text>
+    <line class="scrub-line" x1="0" x2="0" y1="${padT}" y2="${H-padB}" stroke="var(--amber)" stroke-width="1.2" opacity="0"/>
+    <circle class="scrub-p" r="4" fill="var(--mint)" stroke="#0b0f14" stroke-width="1.6" opacity="0"/>
+    <rect class="scrub-hit" x="0" y="0" width="${W}" height="${H}" fill="transparent"/>
+  </svg>`;
+}
+
+function posCard(p){
+  const dte = dteFrom(p.exp);
+  const dteCls = dte<=0?'crit':dte<=14?'crit':dte<=25?'warn':'';
+  const pl = totalPL(p);
+  const pct = (pl!=null) ? pl/maxProfit(p)*100 : null;
+  const mark = currentMark(p);
+  const sym = ccySym(p.ccy);
+  const haveModel = !(p.under==null||p.iv==null||p.under===''||p.iv==='');
+  const th = dailyTheta(p);
+  const otm = otmPct(p);
+  const otmCls = otm==null?'':otm<=15?'crit':otm<=25?'warn':'';
+  const optionCode = optCode(p);
+  const held = holdingDays(p.open);
+  const totalLife = dte>=0 && held!=null ? dte + held : null;
+  const heldRatio = totalLife ? held / totalLife * 100 : null;
+  const timeHint = `距离到期 ${dte<0?'已到期':dte+' 日'}，持有 ${held==null?'—':held+' 日'}，持有/总周期 ${fmtPct(heldRatio,1)}`;
+  const ann = positionAnnualized(p);
+  const q = p.quote || {};
+  const quoteLine = q.bid!=null && q.ask!=null
+    ? `${fmt(q.bid,2)} / ${fmt(q.ask,2)}<br><span style="color:var(--txt-faint)">Spread ${fmt(q.spread,2)} (${fmtPct(q.spreadPct,1)})</span>`
+    : '未抓取';
+  const spreadTag = q.spreadPct!=null ? `Spr ${fmtPct(q.spreadPct,1)}` : 'Spr —';
+  const spreadCls = q.spreadPct==null?'':q.spreadPct>20?'crit':q.spreadPct>8?'warn':'';
+  const sel = p.id===selId;
+  return `
+  <div class="pos ${sel?'sel':''}" data-id="${p.id}">
+    <div class="ph" onclick="toggle('${p.id}')">
+      <span class="ticker">${p.ticker||'—'}</span>
+      <span class="strike">${sym}${fmt(p.strike,0)}${optionCode} ×${p.qty}</span>
+      <span class="pill dte ${dteCls}" title="${timeHint}">${dte<0?'Expired':dte+' DTE'} | ${held==null?'—':held+' DH'}</span>
+      <span class="pill otm ${spreadCls}">${spreadTag}</span>
+      <span class="pill iv">Ann ${fmtPct(ann,1)}</span>
+      <span class="pill iv">IV ${p.iv==null||p.iv===''?'—':fmtPct(+p.iv,0)}</span>
+      <span class="pill otm ${otmCls}">OTM ${otm==null?'—':fmtPct(otm,1)}</span>
+      <span class="pl">
+        <div class="amt ${pl>=0?'pos':'neg'}">${pl==null?'—':(pl>=0?'+':'')+sym+fmt0(pl)}</div>
+        <div class="pct">${pct==null?'手动更新 mark':(pct>=0?'+':'')+fmt(pct,0)+'% 捕获'}</div>
+      </span>
+    </div>
+    <div class="pdetail">
+      <div class="metrics">
+        <div class="m"><div class="mk">已收权利金</div><div class="mv amber">${sym}${fmt0(maxProfit(p))}</div></div>
+        <div class="m"><div class="mk">占用现金</div><div class="mv">${sym}${fmt0(capital(p))}</div></div>
+        <div class="m"><div class="mk">日 Theta</div><div class="mv ${th>=0?'pos':'neg'}">${th==null?'—':(th>=0?'+':'')+sym+fmt0(th)}</div></div>
+        <div class="m"><div class="mk">持有 / 年化</div><div class="mv">${held==null?'—':held+'d'}<br><span style="color:var(--txt-faint)">${fmtPct(ann,1)}</span></div></div>
+        <div class="m"><div class="mk">当前 Mark</div><div class="mv">${mark==null?'—':sym+fmt(mark,2)}</div></div>
+        <div class="m"><div class="mk">Bid / Ask Spread</div><div class="mv" style="font-size:11px">${quoteLine}</div></div>
+        <div class="m"><div class="mk">OTM 缓冲</div><div class="mv ${otm>25?'pos':otm>15?'amber':'neg'}">${otm==null?'—':fmt(otm,1)+'%'}</div></div>
+        <div class="m"><div class="mk">正股 / EOD</div><div class="mv" style="font-size:11px">${p.under?fmt(p.under,2):'—'}<br><span style="color:var(--txt-faint)">${isApiDate(p.underDate)?p.underDate:'API未抓取'}</span></div></div>
+        <div class="m"><div class="mk">到期 / 开仓</div><div class="mv" style="font-size:11px">${p.exp}<br><span style="color:var(--txt-faint)">${p.open||'—'}</span></div></div>
+      </div>
+
+      <div class="chartwrap">
+        <div class="ct">
+          时间价值衰减 <span style="color:var(--txt-faint);font-size:10px">· 拖拽查看每日 / 累计衰减</span>
+          <span class="leg"><i style="background:var(--blue)"></i>当日衰减</span>
+          <span class="leg"><i style="background:var(--mint)"></i>你的利润</span>
+          <span class="leg"><i style="background:var(--amber)"></i>权利金满额</span>
+        </div>
+        ${decaySVG(p)}
+        <div class="readout" id="read_${p.id}"></div>
+        ${!haveModel?'<div class="notewarn">未填正股价/IV，曲线为<b>简化线性衰减</b>占位，衰减读数为均摊值。填入正股价和 IV 可看 Black-Scholes 真实凸形衰减曲线 + 每日 theta。</div>':''}
+      </div>
+
+      <div class="markrow">
+        <div class="field"><label>更新当前 Mark（券商报价）</label><input class="mono" type="number" step="any" id="mk_${p.id}" value="${p.mark!=null?p.mark:''}" placeholder="${mark!=null?fmt(mark,2):'输入实时报价'}"></div>
+        <button class="mini" onclick="saveMark('${p.id}')">保存 Mark</button>
+        <button class="mini" onclick="refreshOptionQuote('${p.id}')">抓取期权报价</button>
+        <button class="mini" onclick="refreshEod('${p.id}')">抓取 EOD</button>
+        ${haveModel?`<button class="mini" onclick="updUnder('${p.id}')">更新正股/IV</button>`:''}
+      </div>
+      <div class="eod-status" id="eod_${p.id}"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span class="hint">提示：DTE≤21 或 OTM 缓冲收窄时，gamma 升温，关注是否平仓/展期。Sell Call 可能需要正股覆盖或额外保证金。</span>
+        <span style="display:flex;gap:8px">
+          <button class="closebtn" onclick="closePosition('${p.id}')">平仓</button>
+          <button class="del" onclick="del('${p.id}')">删除仓位</button>
+        </span>
+      </div>
+    </div>
+  </div>`;
+}
+
+function render(){
+  renderSummary();
+  $('posCount').textContent = POS.length? POS.length+' open':'';
+  if(!POS.length){
+    $('posList').innerHTML = `<div class="empty"><div class="big">还没有仓位</div>在左侧填入你的第一个卖出期权，比如 QQQ 633P 或 720C。</div>`;
+    return;
+  }
+  // sort by DTE ascending
+  const sorted=[...POS].sort((a,b)=>dteFrom(a.exp)-dteFrom(b.exp));
+  $('posList').innerHTML = sorted.map(posCard).join('');
+  wireCharts();
+}
+
+function tradePL(t){
+  return ((+t.prem || 0) - (+t.closePrice || 0)) * t.qty * t.mult;
+}
+function historyAnnualized(t){
+  const cap = capital(t);
+  const days = holdingDays(t.open, t.close);
+  const ret = cap ? tradePL(t) / cap * 100 : null;
+  return annualizedFromReturn(ret, days);
+}
+function premiumCapture(t){
+  return t.prem ? ((+t.prem || 0) - (+t.closePrice || 0)) / (+t.prem) * 100 : null;
+}
+function historyTimeline(t){
+  const total = Math.max(dteFrom(t.exp, t.open), 1);
+  const held = holdingDays(t.open, t.close);
+  const closePct = total && held!=null ? Math.max(0, Math.min(100, held / total * 100)) : 50;
+  return `
+    <div class="timeline">
+      <div class="tpoint open"><i></i><div class="tlabel">Open<br>${t.open||'—'}</div></div>
+      <div class="tpoint close" style="left:${closePct}%"><i></i><div class="tlabel">Close<br>${t.close||'—'}</div></div>
+      <div class="tpoint exp"><i></i><div class="tlabel">Expiry<br>${t.exp||'—'}</div></div>
+    </div>`;
+}
+function historyDetail(t){
+  const sym = ccySym(t.ccy);
+  const pl = tradePL(t);
+  const cap = capital(t);
+  const held = holdingDays(t.open, t.close);
+  const total = t.open && t.exp ? Math.max(dteFrom(t.exp, t.open), 0) : null;
+  const rem = t.close && t.exp ? Math.max(dteFrom(t.exp, t.close), 0) : null;
+  const capture = premiumCapture(t);
+  const ann = historyAnnualized(t);
+  return `
+    <tr class="hdetail"><td colspan="12">
+      ${historyTimeline(t)}
+      <div class="metrics">
+        <div class="m"><div class="mk">Premium Capture</div><div class="mv ${capture>=0?'pos':'neg'}">${fmtPct(capture,1)}</div></div>
+        <div class="m"><div class="mk">已实现 P/L</div><div class="mv ${pl>=0?'pos':'neg'}">${pl>=0?'+':''}${sym}${fmt0(pl)}</div></div>
+        <div class="m"><div class="mk">年化</div><div class="mv ${ann>=0?'pos':'neg'}">${fmtPct(ann,1)}</div></div>
+        <div class="m"><div class="mk">持有 / 总周期</div><div class="mv">${held==null?'—':held+'d'}<br><span style="color:var(--txt-faint)">${total==null?'—':total+'d'}</span></div></div>
+        <div class="m"><div class="mk">平仓至到期</div><div class="mv">${rem==null?'—':rem+'d'}</div></div>
+        <div class="m"><div class="mk">占用资金</div><div class="mv">${sym}${fmt0(cap)}</div></div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:12px">
+        <button class="del" onclick="delHistory('${t.id}')">删除交易</button>
+      </div>
+    </td></tr>`;
+}
+function historyRow(t){
+  const sym = ccySym(t.ccy);
+  const pl = tradePL(t);
+  const held = holdingDays(t.open, t.close);
+  const ann = historyAnnualized(t);
+  const capture = premiumCapture(t);
+  const selected = histOpenIds.has(t.id);
+  return `
+    <tr>
+      <td class="ctl"><button class="iconbtn" title="${selected?'收起':'展开'}" onclick="toggleHistory('${t.id}')">${selected?'▾':'▸'}</button></td>
+      <td><b>${t.ticker}</b><br><span class="mono">${optLabel(t)} ${sym}${fmt(t.strike,0)}${optCode(t)}</span></td>
+      <td>${t.open||'—'}<br><span class="mono">${t.close||'—'}</span></td>
+      <td class="mono">${held==null?'—':held+'d'}</td>
+      <td>${t.exp||'—'}</td>
+      <td class="mono">${sym}${fmt(t.prem,2)} / ${sym}${fmt(t.closePrice,2)}</td>
+      <td class="mono">×${t.qty} · ${t.mult}</td>
+      <td class="mono" style="color:${pl>=0?'var(--mint)':'var(--red)'}">${pl>=0?'+':''}${sym}${fmt0(pl)}</td>
+      <td class="mono" style="color:${ann>=0?'var(--mint)':'var(--red)'}">${fmtPct(ann,1)}</td>
+      <td class="mono">${fmtPct(capture,1)}</td>
+      <td>${t.notes||''}</td>
+      <td class="ctl"><button class="iconbtn" title="编辑" onclick="editHistory('${t.id}')">✎</button></td>
+    </tr>${selected?historyDetail(t):''}`;
+}
+function renderHistory(){
+  $('historyCount').textContent = HISTORY.length ? HISTORY.length+' closed' : '';
+  if(!HISTORY.length){
+    $('historyList').innerHTML = `<div class="empty"><div class="big">还没有历史交易</div>从当前持仓平仓，或在左侧手动录入。</div>`;
+    return;
+  }
+  const rows = [...HISTORY].sort((a,b)=>(b.close||'').localeCompare(a.close||'')).map(historyRow).join('');
+  $('historyList').innerHTML = `<table class="table">
+    <thead><tr><th class="ctl"></th><th>合约</th><th>开仓/平仓</th><th>持有</th><th>到期</th><th>权利金/平仓</th><th>数量</th><th>P/L</th><th>年化</th><th>捕获</th><th>备注</th><th class="ctl"></th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+function renderAll(){
+  render();
+  renderHistory();
+  updateRefreshStatus();
+}
+
+//=================== interactive decay scrubber ===================
+function wireCharts(){
+  document.querySelectorAll('.csp-chart').forEach(svg=>{
+    let d; try{ d=JSON.parse(svg.dataset.series); }catch(e){ return; }
+    const pid=svg.dataset.pid;
+    const read=document.getElementById('read_'+pid);
+    if(!read) return;
+    const line=svg.querySelector('.scrub-line');
+    const cp=svg.querySelector('.scrub-p');
+    const hit=svg.querySelector('.scrub-hit');
+    const innerW=d.W-d.padL-d.padR;
+    const x=i=>d.padL+innerW*(i/d.total);
+    const y=v=>d.padT+(d.H-d.padT-d.padB)*(1-v/d.maxV);
+    const dayDecay = day => day<=0?0:(d.v[day-1]-d.v[day])*d.mult*d.qty;   // single-day theta in money
+    const cumDecay = day => (d.v[0]-d.v[day])*d.mult*d.qty;               // total time value lost since open
+    const profit  = day => (d.prem-d.v[day])*d.mult*d.qty;               // unrealized P&L for short option
+    const m = n => (n>=0?'+':'')+d.sym+Math.round(n).toLocaleString('en-US');
+    const cls = n => n>=0?'pos':'neg';
+
+    function show(day, scrub){
+      day=Math.max(0, Math.min(d.total, Math.round(day)));
+      const dt=new Date(d.open+'T00:00:00'); dt.setDate(dt.getDate()+day);
+      const ds=dt.toISOString().slice(0,10);
+      const rem=d.total-day;
+      read.innerHTML=`
+        <div class="rd"><span>${scrub?'<span class="scrubtag">◆ 游标</span>':'今天'} · 第 ${day} / ${d.total} 天</span><span>${ds} · 剩 ${rem}d</span></div>
+        <div class="rc"><div class="rk">期权价值/张</div><div class="rv">${d.sym}${d.v[day].toFixed(2)}</div></div>
+        <div class="rc"><div class="rk">当日衰减</div><div class="rv ${cls(dayDecay(day))}">${m(dayDecay(day))}</div></div>
+        <div class="rc"><div class="rk">累计衰减</div><div class="rv ${cls(cumDecay(day))}">${m(cumDecay(day))}</div></div>
+        <div class="rc"><div class="rk">浮动盈亏</div><div class="rv ${cls(profit(day))}">${m(profit(day))}</div></div>`;
+      if(scrub){
+        const px=x(day);
+        line.setAttribute('x1',px); line.setAttribute('x2',px); line.setAttribute('opacity','.95');
+        cp.setAttribute('cx',px); cp.setAttribute('cy',y(Math.max(d.prem-d.v[day],0))); cp.setAttribute('opacity','1');
+      }
+    }
+    function clearScrub(){
+      line.setAttribute('opacity','0'); cp.setAttribute('opacity','0');
+      show(d.elapsed,false);
+    }
+    function dayFromEvent(e){
+      const rect=svg.getBoundingClientRect();
+      const cx=(e.clientX!=null)?e.clientX:(e.touches&&e.touches[0]?e.touches[0].clientX:rect.left);
+      const vbX=(cx-rect.left)/rect.width*d.W;
+      return (vbX-d.padL)/innerW*d.total;
+    }
+    let dragging=false;
+    hit.addEventListener('pointerdown',e=>{ dragging=true; try{hit.setPointerCapture(e.pointerId);}catch(_){ } show(dayFromEvent(e),true); e.preventDefault(); });
+    hit.addEventListener('pointermove',e=>{ if(dragging||e.pointerType==='mouse') show(dayFromEvent(e),true); });
+    hit.addEventListener('pointerup',()=>{ dragging=false; });
+    hit.addEventListener('pointerleave',e=>{ if(!dragging && e.pointerType==='mouse') clearScrub(); });
+    hit.addEventListener('pointercancel',()=>{ dragging=false; clearScrub(); });
+
+    show(d.elapsed,false); // default = today
+  });
+}
+
+//=================== actions ===================
+window.toggle = id => { selId = (selId===id)?null:id; render(); };
+window.del = async id => { POS = POS.filter(p=>p.id!==id); if(selId===id)selId=null; await persistPositions(); renderAll(); };
+window.saveMark = async id => {
+  const v = $('mk_'+id).value;
+  const p = POS.find(x=>x.id===id); if(!p) return;
+  p.mark = (v===''?null:+v);
+  await persistPositions(); renderAll();
+};
+window.updUnder = async id => {
+  const p = POS.find(x=>x.id===id); if(!p) return;
+  const u = prompt('新的正股价 Underlying:', p.under); if(u===null) return;
+  const iv = prompt('新的 IV %:', p.iv); if(iv===null) return;
+  p.under = u===''?null:+u;
+  if(u==='') p.underDate = '';
+  p.iv = iv===''?null:+iv; p.mark=null; // recompute from model
+  await persistPositions(); renderAll();
+};
+
+window.closePosition = async id => {
+  const p = POS.find(x=>x.id===id); if(!p) return;
+  const mark = currentMark(p);
+  const v = prompt('平仓价格/张 Close Debit:', mark!=null?fmt(mark,2):'0');
+  if(v===null) return;
+  const closePrice = v===''?0:+v;
+  if(isNaN(closePrice) || closePrice < 0){ alert('平仓价格无效'); return; }
+  const notes = prompt('备注 Notes:', '') || '';
+  HISTORY.push({
+    id:'h'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+    sourceId:p.id,
+    type:optType(p), ticker:p.ticker, ccy:p.ccy, strike:p.strike, exp:p.exp,
+    open:p.open, close:todayStr(), prem:p.prem, closePrice,
+    qty:p.qty, mult:p.mult, under:p.under, iv:p.iv, notes
+  });
+  POS = POS.filter(x=>x.id!==id);
+  if(selId===id) selId=null;
+  await persistPositions();
+  setPage('history');
+  renderAll();
+};
+
+async function fetchEod(ticker){
+  const res = await fetch(`/api/eod?ticker=${encodeURIComponent(ticker)}`, {cache:'no-store'});
+  let data = null;
+  try{ data = await res.json(); }catch(e){}
+  if(!res.ok) throw new Error((data && data.error) || `EOD request failed (${res.status})`);
+  return data;
+}
+async function fetchOptionQuote(p){
+  const qs = new URLSearchParams({
+    ticker:p.ticker,
+    expiry:p.exp,
+    strike:String(p.strike),
+    type:optType(p)
+  });
+  const res = await fetch(`/api/option_quote?${qs.toString()}`, {cache:'no-store'});
+  let data = null;
+  try{ data = await res.json(); }catch(e){}
+  if(!res.ok) throw new Error((data && data.error) || `Option quote failed (${res.status})`);
+  return data;
+}
+async function refreshAllOptionQuotes(silent){
+  if(!POS.length) return [];
+  const failed = [];
+  for(const p of POS){
+    try{
+      const q = await fetchOptionQuote(p);
+      applyOptionQuote(p, q);
+    }catch(e){
+      failed.push(`${p.ticker} ${fmt(p.strike,0)}${optCode(p)} ${p.exp}: ${e.message}`);
+    }
+  }
+  await persistPositions();
+  renderAll();
+  if(failed.length && !silent){
+    alert(`部分期权报价抓取失败：\n${failed.join('\n')}`);
+  }
+  return failed;
+}
+
+async function refreshAllMarketData(silent){
+  if(!POS.length) return { quoteFailed: [], eodFailed: [] };
+  const quoteFailed = [];
+  const eodFailed = [];
+  const tickers = [...new Set(POS.map(p => (p.ticker || '').toUpperCase()).filter(Boolean))];
+  for(const p of POS){
+    try{
+      const q = await fetchOptionQuote(p);
+      applyOptionQuote(p, q);
+    }catch(e){
+      quoteFailed.push(`${p.ticker} ${fmt(p.strike,0)}${optCode(p)} ${p.exp}: ${e.message}`);
+    }
+  }
+  for(const ticker of tickers){
+    try{
+      const data = await fetchEod(ticker);
+      applyEod(data.ticker, data.close, data.date);
+    }catch(e){
+      eodFailed.push(`${ticker}: ${e.message}`);
+    }
+  }
+  await persistPositions();
+  renderAll();
+  if(!silent && (quoteFailed.length || eodFailed.length)){
+    const lines = [];
+    if(quoteFailed.length) lines.push(`期权报价失败：\n${quoteFailed.join('\n')}`);
+    if(eodFailed.length) lines.push(`EOD 失败：\n${eodFailed.join('\n')}`);
+    alert(lines.join('\n\n'));
+  }
+  return { quoteFailed, eodFailed };
+}
+
+function applyEod(ticker, close, date){
+  const t = ticker.toUpperCase();
+  POS.forEach(p => {
+    if((p.ticker || '').toUpperCase() === t){
+      p.under = close;
+      p.underDate = date;
+      p.underFetchedAt = new Date().toISOString();
+      p.mark = null;
+    }
+  });
+}
+function applyOptionQuote(p, q){
+  p.quote = {
+    fetchedAt: new Date().toISOString(),
+    contractSymbol: q.contractSymbol,
+    quoteDate: q.quoteDate,
+    bid: q.bid,
+    ask: q.ask,
+    mid: q.mid,
+    last: q.last,
+    iv: q.iv,
+    spread: q.spread,
+    spreadPct: q.spreadPct,
+    matchedStrike: q.matchedStrike,
+    exactStrike: q.exactStrike,
+    openInterest: q.openInterest,
+    volume: q.volume
+  };
+  if(q.mid!=null) p.mark = +q.mid;
+  if(q.iv!=null) p.iv = +q.iv;
+}
+
+async function refreshFormEod(force){
+  const ticker = ($('f_ticker').value || '').trim().toUpperCase();
+  const status = $('formEodStatus');
+  if(!ticker){
+    formUnderDate = '';
+    if(status) status.textContent = '';
+    return;
+  }
+  if(!force && $('f_under').value !== '') return;
+  const seq = ++formEodSeq;
+  if(status) status.textContent = `抓取 ${ticker} EOD...`;
+  try{
+    const data = await fetchEod(ticker);
+    if(seq !== formEodSeq) return;
+    $('f_under').value = data.close;
+    formUnderDate = data.date;
+    if(status) status.textContent = `${data.date} close ${data.close}`;
+  }catch(e){
+    if(seq !== formEodSeq) return;
+    formUnderDate = '';
+    if(status) status.textContent = `EOD 不可用：${e.message}`;
+  }
+}
+
+function scheduleFormEod(){
+  clearTimeout(formEodTimer);
+  formEodTimer = setTimeout(() => refreshFormEod(false), 700);
+}
+
+function setPage(page){
+  const hist = page === 'history';
+  $('openPage').classList.toggle('hide', hist);
+  $('historyPage').classList.toggle('hide', !hist);
+  $('openPageBtn').classList.toggle('active', !hist);
+  $('historyPageBtn').classList.toggle('active', hist);
+}
+
+$('openPageBtn').onclick = () => setPage('open');
+$('historyPageBtn').onclick = () => setPage('history');
+function toggleCard(cardId, btnId, gridId){
+  const card = $(cardId);
+  const btn = $(btnId);
+  const collapsed = !card.classList.contains('collapsed');
+  card.classList.toggle('collapsed', collapsed);
+  if(gridId) $(gridId).classList.toggle('form-collapsed', collapsed);
+  btn.textContent = collapsed ? '展开' : '收起';
+}
+$('toggleNewPositionBtn').onclick = () => toggleCard('newPositionCard', 'toggleNewPositionBtn', 'openGrid');
+$('toggleHistoryFormBtn').onclick = () => toggleCard('historyFormCard', 'toggleHistoryFormBtn', 'historyGrid');
+
+window.refreshEod = async id => {
+  const p = POS.find(x=>x.id===id); if(!p) return;
+  const el = $('eod_'+id);
+  if(el) el.textContent = `抓取 ${p.ticker}...`;
+  try{
+    const data = await fetchEod(p.ticker);
+    applyEod(data.ticker, data.close, data.date);
+    await persistPositions();
+    renderAll();
+  }catch(e){
+    if(el) el.textContent = e.message;
+    alert(`${p.ticker} EOD 抓取失败：${e.message}\n请确认用 python server.py 打开页面，并已安装 yfinance。`);
+  }
+};
+
+window.refreshOptionQuote = async id => {
+  const p = POS.find(x=>x.id===id); if(!p) return;
+  const el = $('eod_'+id);
+  if(el) el.textContent = `抓取 ${p.ticker} ${optCode(p)} quote...`;
+  try{
+    const q = await fetchOptionQuote(p);
+    applyOptionQuote(p, q);
+    await persistPositions();
+    renderAll();
+  }catch(e){
+    if(el) el.textContent = e.message;
+    alert(`${p.ticker} 期权报价抓取失败：${e.message}`);
+  }
+};
+
+$('refreshAllDataBtn').onclick = async () => {
+  if(!POS.length){ alert('没有可抓取的持仓'); return; }
+  setFileStatus('正在刷新报价和 EOD...', '');
+  await refreshAllMarketData(false);
+};
+
+function setJsonMenu(open){
+  jsonMenuOpen = !!open;
+  const menu = $('jsonMenu');
+  if(menu) menu.classList.toggle('open', jsonMenuOpen);
+}
+
+$('jsonMenuBtn').onclick = e => {
+  e.stopPropagation();
+  setJsonMenu(!jsonMenuOpen);
+};
+
+document.addEventListener('click', e => {
+  const menu = $('jsonMenu');
+  const wrap = menu && menu.parentElement;
+  if(!menu || !wrap) return;
+  if(wrap.contains(e.target)) return;
+  setJsonMenu(false);
+});
+
+$('bindFileBtn').onclick = async () => {
+  setJsonMenu(false);
+  try{
+    await FileStore.bind({ positions: POS, history: HISTORY });
+    setFileStatus(`已绑定 ${FileStore.name}`, 'ok');
+  }catch(e){
+    if(e && e.name === 'AbortError') return;
+    alert(e.message || '绑定 JSON 文件失败');
+    setFileStatus('JSON 绑定失败', 'err');
+  }
+};
+
+$('f_ticker').addEventListener('input', () => {
+  formUnderDate = '';
+  scheduleFormEod();
+});
+$('f_ticker').addEventListener('blur', () => refreshFormEod(false));
+$('f_ticker').addEventListener('keydown', e => {
+  if(e.key === 'Enter'){
+    e.preventDefault();
+    refreshFormEod(true);
+  }
+});
+$('f_under').addEventListener('input', () => {
+  formUnderDate = '';
+});
+
+$('loadFileBtn').onclick = async () => {
+  setJsonMenu(false);
+  try{
+    const loaded = await FileStore.load();
+    const imported = loaded.positions;
+    if(!imported.length && !(loaded.history||[]).length){ alert('JSON 文件里没有可读取的数据'); return; }
+    if(!confirm(`读取 ${imported.length} 条持仓、${(loaded.history||[]).length} 条历史？这会替换当前数据，并绑定该 JSON 文件用于后续实时写入。`)) return;
+    loaded.commit();
+    POS = loaded.positions;
+    HISTORY = loaded.history || [];
+    selId = POS[0] ? POS[0].id : null;
+    await persistPositions();
+    renderAll();
+  }catch(e){
+    if(e && e.name === 'AbortError') return;
+    alert(e.message || '读取 JSON 文件失败');
+    setFileStatus('JSON 读取失败', 'err');
+  }
+};
+
+$('exportBtn').onclick = () => {
+  setJsonMenu(false);
+  const blob = new Blob([Store.exportBlob({ positions: POS, history: HISTORY })], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `csp_positions_${todayStr()}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+};
+
+$('importBtn').onclick = () => {
+  setJsonMenu(false);
+  $('importFile').click();
+};
+$('importFile').onchange = e => {
+  const file = e.target.files && e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async () => {
+    let imported;
+    try{ imported = Store.normalize(JSON.parse(reader.result)); }
+    catch(err){ alert('JSON 文件无法解析'); return; }
+    if(!imported.positions.length && !imported.history.length){ alert('没有找到可导入的数据'); return; }
+    if(!confirm(`导入 ${imported.positions.length} 条持仓、${imported.history.length} 条历史？这会替换当前列表。`)) return;
+    POS = imported.positions;
+    HISTORY = imported.history;
+    selId = POS[0] ? POS[0].id : null;
+    await persistPositions();
+    renderAll();
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+};
+
+$('addBtn').onclick = async () => {
+  const p = {
+    id: 'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+    type: $('f_type').value,
+    ticker: ($('f_ticker').value||'').trim().toUpperCase(),
+    ccy: $('f_ccy').value,
+    strike: +$('f_strike').value,
+    exp: $('f_exp').value,
+    prem: +$('f_prem').value,
+    open: $('f_open').value||todayStr(),
+    qty: Math.max(1, parseInt($('f_qty').value||'1')),
+    mult: Math.max(1, parseInt($('f_mult').value||'100')),
+    under: $('f_under').value===''?null:+$('f_under').value,
+    iv: $('f_iv').value===''?null:+$('f_iv').value,
+      rate: $('f_rate').value===''?0:+$('f_rate').value,
+      underDate: isApiDate(formUnderDate) ? formUnderDate : '',
+      mark: null
+  };
+  if(!p.ticker || !p.strike || !p.exp || !(p.prem>=0)){ alert('请至少填写 标的 / Strike / 到期日 / 权利金'); return; }
+  POS.push(p); selId=p.id;
+  await persistPositions();
+  ['f_ticker','f_strike','f_prem','f_under','f_iv'].forEach(i=>$(i).value='');
+  $('f_type').value = 'put';
+  $('f_exp').value = defaultExpiryStr();
+  formUnderDate = '';
+  $('formEodStatus').textContent = '';
+  renderAll();
+};
+
+function historyFromForm(){
+  return {
+    id: editingHistoryId || ('h'+Date.now().toString(36)+Math.random().toString(36).slice(2,5)),
+    type:$('h_type').value,
+    ticker:($('h_ticker').value||'').trim().toUpperCase(),
+    ccy:$('h_ccy').value,
+    strike:+$('h_strike').value,
+    exp:$('h_exp').value,
+    open:$('h_open').value,
+    close:$('h_close').value||todayStr(),
+    prem:+$('h_prem').value,
+    closePrice:$('h_closePrice').value===''?0:+$('h_closePrice').value,
+    qty:Math.max(1, parseInt($('h_qty').value||'1')),
+    mult:Math.max(1, parseInt($('h_mult').value||'100')),
+    notes:$('h_notes').value||''
+  };
+}
+function fillHistoryForm(t){
+  editingHistoryId = t.id;
+  $('h_ticker').value = t.ticker || '';
+  $('h_type').value = optType(t);
+  $('h_ccy').value = t.ccy || 'USD';
+  $('h_strike').value = t.strike || '';
+  $('h_exp').value = t.exp || '';
+  $('h_open').value = t.open || '';
+  $('h_close').value = t.close || todayStr();
+  $('h_prem').value = t.prem ?? '';
+  $('h_closePrice').value = t.closePrice ?? '';
+  $('h_qty').value = t.qty || 1;
+  $('h_mult').value = t.mult || 100;
+  $('h_notes').value = t.notes || '';
+  $('addHistoryBtn').textContent = '保存历史交易';
+}
+function clearHistoryForm(){
+  editingHistoryId = null;
+  ['h_ticker','h_strike','h_exp','h_prem','h_closePrice','h_notes'].forEach(i=>$(i).value='');
+  $('h_open').value = todayStr();
+  $('h_close').value = todayStr();
+  $('h_qty').value = 1;
+  $('h_mult').value = 100;
+  $('h_type').value = 'put';
+  $('h_ccy').value = 'USD';
+  $('addHistoryBtn').textContent = '+ 添加历史交易';
+}
+$('addHistoryBtn').onclick = async () => {
+  const t = historyFromForm();
+  if(!t.ticker || !t.strike || !(t.prem>=0)){ alert('请至少填写 Ticker / Strike / 权利金'); return; }
+  if(editingHistoryId){
+    HISTORY = HISTORY.map(x=>x.id===editingHistoryId ? t : x);
+  }else{
+    HISTORY.push(t);
+  }
+  await persistPositions();
+  clearHistoryForm();
+  renderHistory();
+};
+window.delHistory = async id => {
+  if(!confirm('删除这条历史交易？')) return;
+  HISTORY = HISTORY.filter(t=>t.id!==id);
+  histOpenIds.delete(id);
+  await persistPositions();
+  renderHistory();
+};
+window.toggleHistory = id => {
+  if(histOpenIds.has(id)) histOpenIds.delete(id);
+  else histOpenIds.add(id);
+  renderHistory();
+};
+window.editHistory = async id => {
+  const t = HISTORY.find(x=>x.id===id); if(!t) return;
+  fillHistoryForm(t);
+  setPage('history');
+};
+
+//=================== init ===================
+(async ()=>{
+  $('f_open').value = todayStr();
+  $('f_exp').value = defaultExpiryStr();
+  $('h_open').value = todayStr();
+  $('h_close').value = todayStr();
+  const restored = await FileStore.restore().catch(()=>null);
+  if(restored){
+    POS = restored.positions;
+    HISTORY = restored.history || [];
+    await Store.save({ positions: POS, history: HISTORY });
+    setFileStatus(`已读取 ${FileStore.name}`, 'ok');
+  }else{
+    const loaded = await Store.load();
+    POS = loaded.positions;
+    HISTORY = loaded.history || [];
+    setFileStatus(FileStore.supported ? '本地已保存 · 未绑定 JSON' : '本地已保存 · 浏览器不支持直写 JSON', '');
+  }
+  renderAll();
+  if(POS.length){
+    setFileStatus('正在自动刷新期权报价...', '');
+    refreshAllOptionQuotes(true).then(failed=>{
+      if(failed.length){
+        setFileStatus(`期权报价部分失败 ${failed.length}/${POS.length}`, 'err');
+      }else{
+        setFileStatus('期权报价已自动刷新', 'ok');
+      }
+    });
+  }
+})();
+</script>
