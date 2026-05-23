@@ -1,4 +1,5 @@
 .server.pid
+.env
 .yfinance_cache/
 __pycache__/
 *.pyc

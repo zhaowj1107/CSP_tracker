@@ -69,6 +69,10 @@
   .seg{display:grid;grid-template-columns:1fr 1fr;gap:6px}
   .seg button{background:var(--panel);border:1px solid var(--line);color:var(--txt-dim);border-radius:8px;padding:8px;cursor:pointer}
   .seg button.active{border-color:var(--amber);color:var(--txt);background:rgba(240,169,59,.1)}
+  .cloud-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+  .cloud-status{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--txt-faint);line-height:1.35;margin-top:7px}
+  .cloud-status.ok{color:var(--mint)}
+  .cloud-status.err{color:var(--red)}
   .nav{display:flex;gap:8px;margin:0 0 18px}
   .navbtn{background:var(--panel-2);border:1px solid var(--line);color:var(--txt-dim);border-radius:8px;
     padding:9px 13px;font-size:12px;cursor:pointer}
@@ -252,6 +256,20 @@
             <button id="themeDarkBtn">黑色</button>
             <button id="themeLightBtn">白色</button>
           </div>
+        </div>
+        <div class="setting-row">
+          <label data-i18n="cloudSetting">云同步 Cloud Sync</label>
+          <input id="cloudEmail" type="email" autocomplete="email" placeholder="email@example.com">
+          <div style="height:6px"></div>
+          <input id="cloudPassword" type="password" autocomplete="current-password" placeholder="password">
+          <div class="cloud-actions">
+            <button class="ghost" id="cloudLoginBtn" type="button">登录</button>
+            <button class="ghost" id="cloudSignupBtn" type="button">注册</button>
+            <button class="ghost" id="cloudUploadBtn" type="button">上传本地</button>
+            <button class="ghost" id="cloudLoadBtn" type="button">读取云端</button>
+          </div>
+          <button class="ghost" id="cloudLogoutBtn" type="button" style="width:100%;margin-top:6px">退出登录</button>
+          <div class="cloud-status" id="cloudStatus">本地模式</div>
         </div>
       </div>
     </div>
@@ -683,7 +701,23 @@ const UI_TEXT = {
   fetchingIv:['抓取 IV...','Fetching IV...'],
   ivFetched:['IV 已获取','IV fetched'],
   ivMissingInputs:['请先填写 Ticker / Expiry / Strike','Fill Ticker / Expiry / Strike first'],
-  ivUnavailable:['没有可用 IV','No IV available']
+  ivUnavailable:['没有可用 IV','No IV available'],
+  cloudSetting:['云同步 Cloud Sync','Cloud Sync'],
+  cloudLocal:['本地模式','Local mode'],
+  cloudNotConfigured:['云同步未配置：请在 Render/本地环境变量设置 SUPABASE_URL 和 SUPABASE_ANON_KEY','Cloud sync not configured: set SUPABASE_URL and SUPABASE_ANON_KEY in Render/local env'],
+  cloudReady:['云同步可用，请登录','Cloud sync ready, sign in'],
+  cloudSignedIn:['已登录','Signed in'],
+  cloudSaving:['正在保存云端...','Saving to cloud...'],
+  cloudSaved:['云端已保存','Cloud saved'],
+  cloudSaveFailed:['云端保存失败','Cloud save failed'],
+  cloudLoaded:['云端数据已读取','Cloud data loaded'],
+  cloudEmpty:['云端暂无数据','No cloud data yet'],
+  cloudUpload:['上传本地','Upload Local'],
+  cloudLoad:['读取云端','Load Cloud'],
+  cloudLogin:['登录','Sign In'],
+  cloudSignup:['注册','Sign Up'],
+  cloudLogout:['退出登录','Sign Out'],
+  signupConfirmMsg:['注册成功。确认邮件已经发送到你的邮箱，请先点击邮件里的确认链接，然后再回来登录。','Signed up. A confirmation email has been sent to your inbox. Click the confirmation link first, then come back and sign in.']
   ,
   modelInputs:['⚙ 可选 · 用于 Black-Scholes 衰减建模','Optional · Black-Scholes decay inputs'],
   modelHint:['填了正股价 + IV，工具会用 Black-Scholes 画出每日时间价值衰减曲线并估算日 theta。不填也能用，只追踪 DTE 和你手动更新的 mark。','With underlying + IV, the tool estimates Black-Scholes decay and daily theta. Without them, it still tracks DTE and manually updated marks.'],
@@ -704,7 +738,15 @@ let editingHistoryId = null;
 let histOpenIds = new Set();
 let jsonMenuOpen = false;
 let settingsOpen = false;
-let UI = { lang:'zh', theme:'dark', marginRatio:100 };
+let UI = { lang:'en', theme:'dark', marginRatio:100 };
+const Cloud = {
+  configured:false,
+  ready:false,
+  client:null,
+  user:null,
+  lastSavedAt:null,
+  status:''
+};
 
 function fmtStamp(ts){
   if(!ts) return '—';
@@ -778,8 +820,9 @@ function translateFileStatus(){
 function loadUiSettings(){
   try{
     const saved = JSON.parse(localStorage.getItem('csp_ui_settings') || '{}');
+    const langParam = new URLSearchParams(window.location.search).get('lang');
     UI = {
-      lang: saved.lang === 'en' ? 'en' : 'zh',
+      lang: langParam === 'zh' || langParam === 'en' ? langParam : (saved.lang === 'zh' ? 'zh' : 'en'),
       theme: saved.theme === 'light' ? 'light' : 'dark',
       marginRatio: Math.max(1, +(saved.marginRatio || 100))
     };
@@ -788,6 +831,12 @@ function loadUiSettings(){
 
 function saveUiSettings(){
   try{ localStorage.setItem('csp_ui_settings', JSON.stringify(UI)); }catch(e){}
+}
+
+function updateLangUrl(){
+  const url = new URL(window.location.href);
+  url.searchParams.set('lang', UI.lang);
+  window.history.replaceState(null, '', url.toString());
 }
 
 function setLabel(inputId, zh, en){
@@ -821,6 +870,12 @@ function applyUiSettings(){
   $('themeLightBtn').classList.toggle('active', UI.theme === 'light');
   $('themeDarkBtn').textContent = dual('黑色', 'Dark');
   $('themeLightBtn').textContent = dual('白色', 'Light');
+  $('cloudLoginBtn').textContent = L('cloudLogin');
+  $('cloudSignupBtn').textContent = L('cloudSignup');
+  $('cloudUploadBtn').textContent = L('cloudUpload');
+  $('cloudLoadBtn').textContent = L('cloudLoad');
+  $('cloudLogoutBtn').textContent = L('cloudLogout');
+  updateCloudUi();
 
   setLabel('f_ticker','标的 Ticker','Ticker');
   setLabel('f_type','类型 Type','Type');
@@ -850,6 +905,130 @@ function applyUiSettings(){
   updateRefreshStatus();
 }
 
+function snapshotState(){
+  return JSON.parse(Store.exportBlob({ positions: POS, history: HISTORY }));
+}
+
+function setCloudStatus(msg, cls){
+  Cloud.status = msg;
+  const el = $('cloudStatus');
+  if(!el) return;
+  el.textContent = msg;
+  el.className = 'cloud-status' + (cls ? ' '+cls : '');
+}
+
+function updateCloudUi(){
+  const disabled = !Cloud.ready;
+  ['cloudLoginBtn','cloudSignupBtn','cloudUploadBtn','cloudLoadBtn','cloudLogoutBtn'].forEach(id => {
+    const el = $(id);
+    if(el) el.disabled = disabled;
+  });
+  const signedIn = !!Cloud.user;
+  if($('cloudLoginBtn')) $('cloudLoginBtn').style.display = signedIn ? 'none' : '';
+  if($('cloudSignupBtn')) $('cloudSignupBtn').style.display = signedIn ? 'none' : '';
+  if($('cloudLogoutBtn')) $('cloudLogoutBtn').style.display = signedIn ? '' : 'none';
+  if($('cloudUploadBtn')) $('cloudUploadBtn').disabled = disabled || !signedIn;
+  if($('cloudLoadBtn')) $('cloudLoadBtn').disabled = disabled || !signedIn;
+  if(!Cloud.status){
+    if(!Cloud.configured) setCloudStatus(L('cloudNotConfigured'), '');
+    else if(!signedIn) setCloudStatus(L('cloudReady'), '');
+    else setCloudStatus(`${L('cloudSignedIn')}: ${Cloud.user.email || Cloud.user.id}`, 'ok');
+  }
+}
+
+async function initCloud(){
+  try{
+    const cfgRes = await fetch('/api/config', {cache:'no-store'});
+    const cfg = await cfgRes.json();
+    Cloud.configured = !!(cfg.supabaseUrl && cfg.supabaseAnonKey);
+    if(!Cloud.configured){
+      setCloudStatus(L('cloudNotConfigured'), '');
+      updateCloudUi();
+      return;
+    }
+    const mod = await import('https://esm.sh/@supabase/supabase-js@2');
+    Cloud.client = mod.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+    Cloud.ready = true;
+    const sessionRes = await Cloud.client.auth.getSession();
+    Cloud.user = sessionRes.data && sessionRes.data.session ? sessionRes.data.session.user : null;
+    Cloud.client.auth.onAuthStateChange((_event, session) => {
+      Cloud.user = session ? session.user : null;
+      Cloud.status = '';
+      updateCloudUi();
+    });
+    Cloud.status = '';
+    updateCloudUi();
+  }catch(e){
+    Cloud.configured = false;
+    Cloud.ready = false;
+    setCloudStatus(`${L('cloudNotConfigured')}: ${e.message}`, 'err');
+    updateCloudUi();
+  }
+}
+
+async function cloudSave(silent){
+  if(!Cloud.ready || !Cloud.user) return;
+  if(!silent) setCloudStatus(L('cloudSaving'), '');
+  const payload = {
+    user_id: Cloud.user.id,
+    data: snapshotState(),
+    updated_at: new Date().toISOString()
+  };
+  const { error } = await Cloud.client.from('user_snapshots').upsert(payload, { onConflict:'user_id' });
+  if(error){
+    setCloudStatus(`${L('cloudSaveFailed')}: ${error.message}`, 'err');
+    if(!silent) alert(error.message);
+    return;
+  }
+  Cloud.lastSavedAt = new Date();
+  setCloudStatus(`${L('cloudSaved')} ${Cloud.lastSavedAt.toLocaleTimeString()}`, 'ok');
+}
+
+async function cloudLoad(){
+  if(!Cloud.ready || !Cloud.user) return;
+  const { data, error } = await Cloud.client
+    .from('user_snapshots')
+    .select('data,updated_at')
+    .eq('user_id', Cloud.user.id)
+    .maybeSingle();
+  if(error){
+    setCloudStatus(error.message, 'err');
+    alert(error.message);
+    return;
+  }
+  if(!data || !data.data){
+    setCloudStatus(L('cloudEmpty'), '');
+    return;
+  }
+  const loaded = Store.normalize(data.data);
+  POS = loaded.positions;
+  HISTORY = loaded.history;
+  selId = POS[0] ? POS[0].id : null;
+  await Store.save({ positions: POS, history: HISTORY });
+  setCloudStatus(`${L('cloudLoaded')} ${data.updated_at ? data.updated_at.slice(0,10) : ''}`.trim(), 'ok');
+  renderAll();
+}
+
+async function resolveCloudAfterLogin(){
+  updateCloudUi();
+  const { data, error } = await Cloud.client
+    .from('user_snapshots')
+    .select('updated_at')
+    .eq('user_id', Cloud.user.id)
+    .maybeSingle();
+  if(error){
+    setCloudStatus(error.message, 'err');
+    return;
+  }
+  if(data){
+    const useCloud = confirm(dual('检测到云端数据。是否读取云端数据？选择“取消”会保留本地数据并上传到云端。','Cloud data found. Load it now? Choose Cancel to keep local data and upload it to cloud.'));
+    if(useCloud) await cloudLoad();
+    else await cloudSave(false);
+  }else{
+    await cloudSave(false);
+  }
+}
+
 async function persistPositions(){
   const saved = await Store.save({ positions: POS, history: HISTORY });
   POS = saved.positions;
@@ -865,6 +1044,9 @@ async function persistPositions(){
     }
   }else{
     setFileStatus(FileStore.supported ? '本地已保存 · 未绑定 JSON' : '本地已保存 · 浏览器不支持直写 JSON', '');
+  }
+  if(Cloud.ready && Cloud.user){
+    cloudSave(true).catch(e => setCloudStatus(`${L('cloudSaveFailed')}: ${e.message}`, 'err'));
   }
   return POS;
 }
@@ -1522,8 +1704,8 @@ $('settingsBtn').onclick = e => {
   e.stopPropagation();
   setSettings(!settingsOpen);
 };
-$('langZhBtn').onclick = () => { UI.lang = 'zh'; saveUiSettings(); applyUiSettings(); renderAll(); };
-$('langEnBtn').onclick = () => { UI.lang = 'en'; saveUiSettings(); applyUiSettings(); renderAll(); };
+$('langZhBtn').onclick = () => { UI.lang = 'zh'; Cloud.status = ''; updateLangUrl(); saveUiSettings(); applyUiSettings(); renderAll(); };
+$('langEnBtn').onclick = () => { UI.lang = 'en'; Cloud.status = ''; updateLangUrl(); saveUiSettings(); applyUiSettings(); renderAll(); };
 $('themeDarkBtn').onclick = () => { UI.theme = 'dark'; saveUiSettings(); applyUiSettings(); };
 $('themeLightBtn').onclick = () => { UI.theme = 'light'; saveUiSettings(); applyUiSettings(); };
 $('marginRatioInput').onchange = () => {
@@ -1531,6 +1713,42 @@ $('marginRatioInput').onchange = () => {
   saveUiSettings();
   renderAll();
 };
+$('cloudLoginBtn').onclick = async () => {
+  if(!Cloud.ready){ setCloudStatus(L('cloudNotConfigured'), 'err'); return; }
+  const email = ($('cloudEmail').value || '').trim();
+  const password = $('cloudPassword').value || '';
+  if(!email || !password){ setCloudStatus(dual('请输入邮箱和密码','Enter email and password'), 'err'); return; }
+  const { data, error } = await Cloud.client.auth.signInWithPassword({ email, password });
+  if(error){ setCloudStatus(error.message, 'err'); return; }
+  Cloud.user = data.user;
+  Cloud.status = '';
+  await resolveCloudAfterLogin();
+};
+$('cloudSignupBtn').onclick = async () => {
+  if(!Cloud.ready){ setCloudStatus(L('cloudNotConfigured'), 'err'); return; }
+  const email = ($('cloudEmail').value || '').trim();
+  const password = $('cloudPassword').value || '';
+  if(!email || !password){ setCloudStatus(dual('请输入邮箱和密码','Enter email and password'), 'err'); return; }
+  const { data, error } = await Cloud.client.auth.signUp({ email, password });
+  if(error){ setCloudStatus(error.message, 'err'); return; }
+  Cloud.user = data.user;
+  if(Cloud.user && data.session){
+    await cloudSave(false);
+  }else{
+    setCloudStatus(L('signupConfirmMsg'), 'ok');
+    alert(L('signupConfirmMsg'));
+  }
+  updateCloudUi();
+};
+$('cloudLogoutBtn').onclick = async () => {
+  if(!Cloud.ready) return;
+  await Cloud.client.auth.signOut();
+  Cloud.user = null;
+  Cloud.status = '';
+  updateCloudUi();
+};
+$('cloudUploadBtn').onclick = () => cloudSave(false);
+$('cloudLoadBtn').onclick = () => cloudLoad();
 
 $('jsonMenuBtn').onclick = e => {
   e.stopPropagation();
@@ -1739,6 +1957,7 @@ window.editHistory = async id => {
 (async ()=>{
   loadUiSettings();
   applyUiSettings();
+  initCloud();
   $('f_open').value = todayStr();
   $('f_exp').value = defaultExpiryStr();
   $('h_open').value = todayStr();

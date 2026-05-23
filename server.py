@@ -1,14 +1,30 @@
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from datetime import datetime, time
 from json import dumps
+import os
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 from zoneinfo import ZoneInfo
 
 
 ROOT = Path(__file__).resolve().parent
-HOST = "127.0.0.1"
-PORT = 8000
+ENV_FILE = ROOT / ".env"
+
+
+def load_dotenv():
+    if not ENV_FILE.exists():
+        return
+    for raw in ENV_FILE.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+
+
+load_dotenv()
+HOST = os.environ.get("HOST") or ("0.0.0.0" if os.environ.get("PORT") else "127.0.0.1")
+PORT = int(os.environ.get("PORT", "8000"))
 YF_CACHE = ROOT / ".yfinance_cache"
 YAHOO_ALIASES = {
     "SOI": "SOI.PA",
@@ -48,6 +64,8 @@ class CSPHandler(SimpleHTTPRequestHandler):
             return self.handle_eod(parsed.query)
         if parsed.path == "/api/option_quote":
             return self.handle_option_quote(parsed.query)
+        if parsed.path == "/api/config":
+            return self.handle_config()
         return super().do_GET()
 
     def send_json(self, status, payload):
@@ -57,6 +75,12 @@ class CSPHandler(SimpleHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+    def handle_config(self):
+        return self.send_json(200, {
+            "supabaseUrl": os.environ.get("SUPABASE_URL", ""),
+            "supabaseAnonKey": os.environ.get("SUPABASE_ANON_KEY", ""),
+        })
 
     def handle_eod(self, query):
         ticker = (parse_qs(query).get("ticker") or [""])[0].strip().upper()
