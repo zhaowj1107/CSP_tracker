@@ -1,6 +1,8 @@
 <!-- CSP Tracker — Cash-Secured Put position & theta decay tool -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Option Tracker</title>
+<link id="favicon" rel="icon" type="image/svg+xml" href='data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"%3E%3Crect width="64" height="64" rx="14" fill="%230b0f14"/%3E%3Cpath d="M16 42h32" stroke="%23f0a93b" stroke-width="4" stroke-linecap="round"/%3E%3Cpath d="M20 36l8-12 8 8 8-14" fill="none" stroke="%233ddc97" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/%3E%3Ccircle cx="48" cy="18" r="5" fill="%235aa9ff"/%3E%3C/svg%3E'>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
 
@@ -157,9 +159,11 @@
   .pill.otm{background:rgba(61,220,151,.1);color:var(--mint)}
   .pill.otm.warn{background:rgba(240,169,59,.15);color:var(--amber)}
   .pill.otm.crit{background:rgba(255,95,110,.15);color:var(--red)}
+  .pill-row{display:contents}
   .position-card .pl{margin-left:auto;text-align:right;font-family:'IBM Plex Mono',monospace}
   .position-card .pl .amt{font-size:16px;font-weight:600} .position-card .pl .pct{font-size:10.5px;color:var(--txt-faint)}
   .position-card .amt.pos{color:var(--mint)} .position-card .amt.neg{color:var(--red)}
+  .mobile-pos-line1{display:none}
 
   .pdetail{padding:0 15px;max-height:0;overflow:hidden;transition:max-height .3s ease,padding .3s ease}
   .position-card.sel .pdetail{max-height:760px;padding:4px 15px 16px}
@@ -223,9 +227,66 @@
   @media(max-width:560px){.readout{grid-template-columns:repeat(2,1fr)}}
   .notewarn{font-size:10.5px;color:var(--amber-soft);background:rgba(240,169,59,.07);
     border:1px solid rgba(240,169,59,.2);border-radius:8px;padding:8px 10px;margin-top:4px;line-height:1.5}
+  @media(max-width:640px){
+    .wrap{padding:16px 10px 56px}
+    header{align-items:flex-start;margin-bottom:16px;gap:12px}
+    h1{font-size:28px}
+    .sub{font-size:11.5px;line-height:1.35}
+    .header-actions{width:100%;justify-content:space-between}
+    .settings-panel{position:fixed;left:10px;right:10px;top:72px;width:auto;max-height:calc(100vh - 92px);overflow:auto}
+    .nav{gap:7px;overflow-x:auto;padding-bottom:2px}
+    .navbtn{padding:10px 14px;min-height:42px}
+    .summary{grid-template-columns:repeat(3,minmax(0,1fr));border-radius:12px;margin-bottom:16px}
+    .scell{padding:10px 8px;min-height:76px;min-width:0}
+    .scell .k{font-size:8.8px;letter-spacing:.6px;line-height:1.3;overflow-wrap:anywhere}
+    .scell .v{font-size:16px;min-height:22px;white-space:nowrap}
+    .grid{gap:14px}
+    .row2{grid-template-columns:1fr}
+    .card{border-radius:12px}
+    .card .head{padding:12px;align-items:flex-start;gap:10px;flex-wrap:wrap}
+    .card .body{padding:12px}
+    .tools{width:100%;justify-content:flex-start}
+    .toolstack{align-items:flex-start;flex:1 1 160px}
+    .toolhint{text-align:left;max-width:none}
+    .file-status{white-space:normal}
+    .menupanel{left:0;right:auto}
+    .position-card .ph{display:grid;grid-template-columns:1fr;gap:8px;padding:12px}
+    .mobile-pos-line1{display:block;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;color:var(--txt);line-height:1.35}
+    .position-card .ph>.ticker,
+    .position-card .ph>.strike,
+    .position-card .ph>.pill.dte,
+    .position-card .pill.ann{display:none}
+    .position-card .pill-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+    .position-card .pill{width:max-content;max-width:100%}
+    .position-card .pl{grid-column:1/-1;margin-left:0;text-align:left;border-top:1px solid var(--line-soft);padding-top:8px}
+    .position-card .pl .amt{font-size:18px}
+    .position-card.sel .pdetail{max-height:none;padding:4px 12px 14px}
+    .metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .m{padding:9px}
+    .markrow{display:grid;grid-template-columns:1fr 1fr;align-items:stretch}
+    .markrow .field{grid-column:1/-1}
+    .markrow .mini{width:100%;white-space:normal}
+    .readout{grid-template-columns:repeat(2,1fr)}
+    .readout .rd{display:block;line-height:1.5}
+    .table{min-width:860px}
+    #historyList{overflow-x:auto}
+    .timeline{min-width:360px}
+  }
+  @media(max-width:420px){
+    .metrics{grid-template-columns:1fr}
+    .markrow{grid-template-columns:1fr}
+    .cloud-actions{grid-template-columns:1fr}
+    .seg{grid-template-columns:1fr 1fr}
+  }
+  @media(max-width:360px){
+    .scell{padding:9px 7px;min-height:72px}
+    .scell .k{font-size:8px;letter-spacing:.45px}
+    .scell .v{font-size:15px}
+  }
   footer{margin-top:30px;color:var(--txt-faint);font-size:11px;text-align:center;line-height:1.7}
   .disc{max-width:720px;margin:14px auto 0;font-size:10.5px;color:var(--txt-faint);
     border-top:1px solid var(--line-soft);padding-top:14px;line-height:1.6}
+  @media(max-width:640px){footer{font-size:10.5px;text-align:left}}
 </style>
 
 <div class="wrap">
@@ -726,6 +787,7 @@ const UI_TEXT = {
 };
 const L = key => (UI.lang === 'en' ? UI_TEXT[key][1] : UI_TEXT[key][0]);
 const dual = (zh, en) => UI.lang === 'en' ? en : zh;
+const setDocumentTitle = () => { document.title = dual('Sell Put计算器', 'Option Tracker'); };
 
 let POS = [];
 let HISTORY = [];
@@ -846,6 +908,7 @@ function setLabel(inputId, zh, en){
 }
 
 function applyUiSettings(){
+  setDocumentTitle();
   document.body.classList.toggle('light', UI.theme === 'light');
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.dataset.i18n;
@@ -903,6 +966,10 @@ function applyUiSettings(){
   setLabel('h_notes','备注 Notes','Notes');
   translateFileStatus();
   updateRefreshStatus();
+}
+
+function isMobileView(){
+  return window.matchMedia('(max-width: 640px)').matches;
 }
 
 function snapshotState(){
@@ -1213,17 +1280,21 @@ function posCard(p){
   const riskTag = otm!=null && otm<15 && dte<21
     ? `<div style="margin:6px 0 10px"><span class="pill otm ${otm<10||dte<7?'crit':'warn'}">${dual('风险提示：DTE<21 且 OTM<15%，关注平仓/展期','Risk alert: DTE<21 and OTM<15%; consider close or roll')}</span></div>`
     : '';
+  const mobileLine1 = `${p.ticker||'—'} ${fmt(p.strike,0)}${optionCode}*${p.qty} ${dte<0?'Expired':dte+' DTE'} | ${held==null?'—':held+' DH'}`;
   const sel = p.id===selId;
   return `
   <div class="position-card ${sel?'sel':''}" data-id="${p.id}">
     <div class="ph" onclick="toggle('${p.id}')">
+      <div class="mobile-pos-line1">${mobileLine1}</div>
       <span class="ticker">${p.ticker||'—'}</span>
       <span class="strike">${sym}${fmt(p.strike,0)}${optionCode} ×${p.qty}</span>
       <span class="pill dte ${dteCls}" title="${timeHint}">${dte<0?'Expired':dte+' DTE'} | ${held==null?'—':held+' DH'}</span>
-      <span class="pill otm ${spreadCls}">${spreadTag}</span>
-      <span class="pill iv">Ann ${fmtPct(ann,1)}</span>
-      <span class="pill iv">IV ${p.iv==null||p.iv===''?'—':fmtPct(+p.iv,0)}</span>
-      <span class="pill otm ${otmCls}">OTM ${otm==null?'—':fmtPct(otm,1)}</span>
+      <div class="pill-row">
+        <span class="pill otm ${spreadCls}">${spreadTag}</span>
+        <span class="pill iv ann">Ann ${fmtPct(ann,1)}</span>
+        <span class="pill iv">IV ${p.iv==null||p.iv===''?'—':fmtPct(+p.iv,0)}</span>
+        <span class="pill otm ${otmCls}">OTM ${otm==null?'—':fmtPct(otm,1)}</span>
+      </div>
       <span class="pl">
         <div class="amt ${pl>=0?'pos':'neg'}">${pl==null?'—':(pl>=0?'+':'')+sym+fmt0(pl)}</div>
         <div class="pct">${pct==null?L('manualMark'):(pct>=0?'+':'')+fmt(pct,0)+'% '+L('premiumCapture')}</div>
@@ -1956,6 +2027,10 @@ window.editHistory = async id => {
 //=================== init ===================
 (async ()=>{
   loadUiSettings();
+  if(isMobileView()){
+    $('newPositionCard').classList.add('collapsed');
+    $('openGrid').classList.add('form-collapsed');
+  }
   applyUiSettings();
   initCloud();
   $('f_open').value = todayStr();
