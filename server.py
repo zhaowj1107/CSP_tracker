@@ -373,7 +373,7 @@ class CSPHandler(SimpleHTTPRequestHandler):
             return self.send_json(400, {"error": "Missing ticker"})
 
         market_now = datetime.now(ZoneInfo("America/New_York"))
-        after_close = market_now.time() >= time(16, 30)
+        after_close = market_now.time() >= time(16, 5)
         cached = _cache_get(_EOD_CACHE, ticker, EOD_TTL)
         if cached:
             cached_date = cached.get("date", "")
