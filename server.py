@@ -1,10 +1,13 @@
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
-from datetime import datetime, time
-from json import dumps
+from calendar import monthcalendar, FRIDAY
+from datetime import datetime, time, date as dt_date, timedelta
+from json import dumps, loads
 import os
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 from zoneinfo import ZoneInfo
+
+import requests as http_requests
 
 
 ROOT = Path(__file__).resolve().parent
@@ -30,6 +33,29 @@ YAHOO_ALIASES = {
     "SOI": "SOI.PA",
 }
 
+FOMC_DATES = [
+    "2025-01-29","2025-03-19","2025-05-07","2025-06-18",
+    "2025-07-30","2025-09-17","2025-10-29","2025-12-10",
+    "2026-01-28","2026-03-18","2026-05-06","2026-06-17",
+    "2026-07-29","2026-09-16","2026-10-28","2026-12-09",
+]
+CPI_DATES = [
+    "2025-01-15","2025-02-12","2025-03-12","2025-04-10",
+    "2025-05-13","2025-06-11","2025-07-11","2025-08-12",
+    "2025-09-10","2025-10-15","2025-11-12","2025-12-10",
+    "2026-01-14","2026-02-11","2026-03-11","2026-04-09",
+    "2026-05-13","2026-06-10","2026-07-14","2026-08-12",
+    "2026-09-09","2026-10-14","2026-11-11","2026-12-09",
+]
+NFP_DATES = [
+    "2025-01-10","2025-02-07","2025-03-07","2025-04-04",
+    "2025-05-02","2025-06-06","2025-07-03","2025-08-01",
+    "2025-09-05","2025-10-03","2025-11-07","2025-12-05",
+    "2026-01-09","2026-02-06","2026-03-06","2026-04-03",
+    "2026-05-01","2026-06-05","2026-07-02","2026-08-07",
+    "2026-09-04","2026-10-02","2026-11-06","2026-12-04",
+]
+
 
 def yahoo_symbols(ticker):
     symbols = [ticker]
@@ -43,6 +69,97 @@ def configure_yfinance(yf):
     YF_CACHE.mkdir(exist_ok=True)
     if hasattr(yf, "set_tz_cache_location"):
         yf.set_tz_cache_location(str(YF_CACHE))
+
+
+AI_SYSTEM_PROMPT = """You are an expert options trading risk analyst specializing in Cash-Secured Puts (CSP) and Covered Calls.
+
+Analyze the user's short option portfolio and provide:
+
+1. **Portfolio Overview**: Overall risk assessment, total capital deployed, portfolio theta, and diversification.
+2. **Position-by-Position Analysis**: For each position, evaluate:
+   - Risk level (Low / Medium / High / Critical)
+   - Whether the position is safe to hold to expiration or should be closed/rolled early
+   - Key factors: DTE, OTM buffer, IV level, theta capture progress, unrealized P/L
+3. **Action Recommendations**: Specific, prioritized recommendations (hold / close / roll / monitor)
+4. **Risk Warnings**: Flag any positions with concerning metrics (OTM < 15%, DTE < 7, deep ITM, etc.)
+
+Be concise and actionable. Use data-driven reasoning. Format with clear markdown headers and bullet points.
+Respond in the same language as the user's input."""
+
+
+def _call_openai(system_prompt, user_prompt):
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        return None
+
+    base_url = os.environ.get("OPENAI_RESPONSES_BASE_URL", "https://api.openai.com/v1").rstrip("/")
+    endpoint = base_url if base_url.endswith("/responses") else f"{base_url}/responses"
+    model = os.environ.get("OPENAI_MODEL", "gpt-4o")
+    max_output_tokens = int(os.environ.get("OPENAI_MAX_OUTPUT_TOKENS", "3200"))
+
+    response = http_requests.post(
+        endpoint,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        },
+        json={
+            "model": model,
+            "instructions": system_prompt,
+            "input": [{"role": "user", "content": [{"type": "input_text", "text": user_prompt}]}],
+            "stream": False,
+            "max_output_tokens": max_output_tokens,
+        },
+        timeout=90,
+    )
+    response.raise_for_status()
+    data = response.json()
+    for item in data.get("output", []):
+        if item.get("type") == "message":
+            for block in item.get("content", []):
+                if block.get("type") == "output_text":
+                    return block.get("text")
+    return data.get("output_text") or None
+
+
+def _call_minimax(system_prompt, user_prompt):
+    api_key = os.environ.get("MINIMAX_API_KEY")
+    if not api_key:
+        return None
+    try:
+        from openai import OpenAI
+    except ImportError:
+        return None
+
+    client = OpenAI(base_url="https://api.minimax.chat/v1", api_key=api_key)
+    response = client.chat.completions.create(
+        model="MiniMax-M2.5",
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        timeout=90,
+    )
+    return response.choices[0].message.content
+
+
+def ai_analyze(system_prompt, user_prompt):
+    try:
+        result = _call_openai(system_prompt, user_prompt)
+        if result:
+            return result, "openai"
+    except Exception as e:
+        print(f"OpenAI call failed, trying MiniMax fallback: {e}")
+
+    try:
+        result = _call_minimax(system_prompt, user_prompt)
+        if result:
+            return result, "minimax"
+    except Exception as e:
+        print(f"MiniMax call also failed: {e}")
+
+    return None, None
 
 
 class CSPHandler(SimpleHTTPRequestHandler):
@@ -66,7 +183,147 @@ class CSPHandler(SimpleHTTPRequestHandler):
             return self.handle_option_quote(parsed.query)
         if parsed.path == "/api/config":
             return self.handle_config()
+        if parsed.path == "/api/econ_calendar":
+            return self.handle_econ_calendar(parsed.query)
         return super().do_GET()
+
+    def do_POST(self):
+        parsed = urlparse(self.path)
+        if parsed.path == "/api/ai_analyze":
+            return self.handle_ai_analyze()
+        self.send_json(404, {"error": "Not found"})
+
+    def read_body(self):
+        length = int(self.headers.get("Content-Length", 0))
+        return self.rfile.read(length) if length else b""
+
+    def handle_ai_analyze(self):
+        try:
+            body = loads(self.read_body())
+        except Exception:
+            return self.send_json(400, {"error": "Invalid JSON body"})
+
+        positions = body.get("positions", [])
+        lang = body.get("lang", "en")
+        if not positions:
+            return self.send_json(400, {"error": "No positions to analyze"})
+
+        if lang == "zh":
+            header = "以下是我当前的期权卖出持仓，请用中文分析：\n\n"
+        else:
+            header = "Here are my current short option positions. Please analyze:\n\n"
+
+        lines = []
+        for i, p in enumerate(positions, 1):
+            opt_type = "Put" if p.get("type") != "call" else "Call"
+            sym = {"USD": "$", "EUR": "€", "HKD": "HK$", "CNY": "¥", "GBP": "£"}.get(p.get("ccy", "USD"), "")
+            line = (
+                f"{i}. {p.get('ticker','')} Sell {opt_type} {sym}{p.get('strike','')} "
+                f"x{p.get('qty',1)} | Expiry: {p.get('exp','')} | "
+                f"Premium: {sym}{p.get('prem','')} | Open: {p.get('open','')}"
+            )
+            extras = []
+            if p.get("under") is not None:
+                extras.append(f"Underlying: {p['under']}")
+            if p.get("iv") is not None:
+                extras.append(f"IV: {p['iv']}%")
+            if p.get("mark") is not None:
+                extras.append(f"Mark: {sym}{p['mark']}")
+            if p.get("dte") is not None:
+                extras.append(f"DTE: {p['dte']}")
+            if p.get("otm") is not None:
+                extras.append(f"OTM: {p['otm']}%")
+            if p.get("dailyTheta") is not None:
+                extras.append(f"Daily Theta: {sym}{p['dailyTheta']}")
+            if p.get("unrealizedPL") is not None:
+                extras.append(f"Unrealized P/L: {sym}{p['unrealizedPL']}")
+            if p.get("annualized") is not None:
+                extras.append(f"Annualized: {p['annualized']}%")
+            if p.get("cashSecured") is not None:
+                extras.append(f"Cash Secured: {sym}{p['cashSecured']}")
+            if extras:
+                line += " | " + " | ".join(extras)
+            lines.append(line)
+
+        user_prompt = header + "\n".join(lines)
+
+        result, provider = ai_analyze(AI_SYSTEM_PROMPT, user_prompt)
+        if not result:
+            return self.send_json(503, {
+                "error": "AI service unavailable. Configure OPENAI_API_KEY or MINIMAX_API_KEY in environment."
+            })
+
+        return self.send_json(200, {"analysis": result, "provider": provider})
+
+    def handle_econ_calendar(self, query):
+        qs = parse_qs(query)
+        tickers = [t.strip().upper() for t in (qs.get("tickers") or [""])[0].split(",") if t.strip()]
+        days = min(int((qs.get("days") or ["60"])[0]), 120)
+        earnings_only = (qs.get("earnings_only") or ["0"])[0] == "1"
+
+        today = datetime.now(ZoneInfo("America/New_York")).date()
+        end_date = today + timedelta(days=days)
+
+        events = []
+
+        if not earnings_only:
+            for d_str in FOMC_DATES:
+                d = dt_date.fromisoformat(d_str)
+                if today <= d <= end_date:
+                    events.append({"date": d_str, "type": "fomc", "risk": "high", "title": "FOMC Rate Decision"})
+
+            for d_str in CPI_DATES:
+                d = dt_date.fromisoformat(d_str)
+                if today <= d <= end_date:
+                    events.append({"date": d_str, "type": "cpi", "risk": "medium", "title": "CPI Release"})
+
+            for d_str in NFP_DATES:
+                d = dt_date.fromisoformat(d_str)
+                if today <= d <= end_date:
+                    events.append({"date": d_str, "type": "nfp", "risk": "medium", "title": "Non-Farm Payrolls"})
+
+            # Monthly OPEX: 3rd Friday (frontend also calculates this, kept here as fallback)
+            cur = today.replace(day=1)
+            for _ in range(4):
+                fridays = [w[FRIDAY] for w in monthcalendar(cur.year, cur.month) if w[FRIDAY]]
+                opex = dt_date(cur.year, cur.month, fridays[2])
+                if today <= opex <= end_date:
+                    events.append({"date": opex.isoformat(), "type": "opex", "risk": "low", "title": "Monthly OPEX"})
+                m = cur.month + 1
+                cur = cur.replace(year=cur.year + (1 if m > 12 else 0), month=(m if m <= 12 else 1))
+
+        # Earnings from yfinance
+        if tickers:
+            try:
+                import yfinance as yf
+                configure_yfinance(yf)
+                for ticker in tickers[:8]:
+                    for ysym in yahoo_symbols(ticker):
+                        try:
+                            tk = yf.Ticker(ysym)
+                            ed_df = tk.earnings_dates
+                            if ed_df is not None and not ed_df.empty:
+                                for idx in ed_df.index:
+                                    ed = idx.date() if hasattr(idx, "date") else idx
+                                    if today <= ed <= end_date:
+                                        events.append({"date": ed.isoformat(), "type": "earnings",
+                                            "risk": "high", "ticker": ticker,
+                                            "title": f"{ticker} Earnings"})
+                                break
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+
+        seen, unique = set(), []
+        for e in events:
+            k = (e["date"], e["type"], e.get("ticker", ""))
+            if k not in seen:
+                seen.add(k)
+                unique.append(e)
+        unique.sort(key=lambda e: e["date"])
+
+        return self.send_json(200, {"events": unique, "generated": today.isoformat(), "window": days})
 
     def send_json(self, status, payload):
         body = dumps(payload).encode("utf-8")

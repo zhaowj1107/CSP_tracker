@@ -283,6 +283,59 @@
     .scell .k{font-size:8px;letter-spacing:.45px}
     .scell .v{font-size:15px}
   }
+  /* AI Modal */
+  .ai-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:100;display:none;
+    align-items:center;justify-content:center;padding:20px}
+  .ai-overlay.open{display:flex}
+  .ai-modal{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);
+    max-width:780px;width:100%;max-height:85vh;display:flex;flex-direction:column;overflow:hidden}
+  .ai-modal-head{padding:16px 20px;border-bottom:1px solid var(--line-soft);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+  .ai-modal-head .t{font-family:'Fraunces',serif;font-weight:600;font-size:18px}
+  .ai-modal-head .provider{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--txt-faint);margin-left:10px}
+  .ai-modal-body{padding:20px;overflow-y:auto;flex:1;font-size:13.5px;line-height:1.7;color:var(--txt)}
+  .ai-modal-body h1,.ai-modal-body h2,.ai-modal-body h3{font-family:'Fraunces',serif;color:var(--amber);margin:18px 0 8px;line-height:1.3}
+  .ai-modal-body h1{font-size:18px} .ai-modal-body h2{font-size:16px} .ai-modal-body h3{font-size:14px}
+  .ai-modal-body h1:first-child,.ai-modal-body h2:first-child,.ai-modal-body h3:first-child{margin-top:0}
+  .ai-modal-body p{margin:0 0 10px}
+  .ai-modal-body ul,.ai-modal-body ol{margin:0 0 10px;padding-left:20px}
+  .ai-modal-body li{margin-bottom:4px}
+  .ai-modal-body strong{color:var(--amber-soft)}
+  .ai-modal-body code{font-family:'IBM Plex Mono',monospace;font-size:12px;background:var(--panel-2);border:1px solid var(--line-soft);border-radius:4px;padding:1px 5px}
+  .ai-modal-body hr{border:none;border-top:1px solid var(--line-soft);margin:16px 0}
+  .ai-modal-foot{padding:12px 20px;border-top:1px solid var(--line-soft);display:flex;justify-content:flex-end;gap:8px;flex-shrink:0}
+  .ai-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:50px;gap:14px;color:var(--txt-dim)}
+  .ai-spinner{width:32px;height:32px;border:3px solid var(--line);border-top-color:var(--amber);border-radius:50%;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .ai-error{color:var(--red);background:rgba(255,95,110,.08);border:1px solid var(--red-dim);border-radius:10px;padding:14px;font-size:13px;line-height:1.5}
+  @media(max-width:640px){
+    .ai-overlay{padding:10px}
+    .ai-modal{max-height:92vh;border-radius:12px}
+    .ai-modal-head{padding:12px 14px}
+    .ai-modal-body{padding:14px;font-size:13px}
+  }
+
+  /* Economic Calendar */
+  .cal-sep{font-size:10px;font-weight:700;letter-spacing:.07em;color:var(--txt-faint);text-transform:uppercase;padding:10px 0 4px;border-top:1px solid var(--line)}
+  .cal-sep:first-child{border-top:none;padding-top:2px}
+  .cal-event{display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)}
+  .cal-event:last-child{border-bottom:none}
+  .cal-left{display:flex;flex-direction:column;align-items:center;gap:3px;padding-top:3px;min-width:34px}
+  .cal-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+  .cal-dot.fomc{background:#4a9eff}
+  .cal-dot.cpi{background:#a78bfa}
+  .cal-dot.nfp{background:var(--amber)}
+  .cal-dot.opex{background:var(--mint)}
+  .cal-dot.earnings{background:var(--red)}
+  .cal-mday{font-size:10px;color:var(--txt-faint);font-family:var(--mono)}
+  .cal-info{flex:1;min-width:0}
+  .cal-title{font-size:12.5px;font-weight:600;color:var(--txt);display:flex;align-items:center;flex-wrap:wrap;gap:5px}
+  .cal-note{font-size:11px;color:var(--txt-faint);margin-top:2px;line-height:1.4}
+  .cal-badge{font-size:10px;background:rgba(239,68,68,.15);color:var(--red);border-radius:4px;padding:1px 6px;white-space:nowrap}
+  .cal-cd{font-size:11px;font-family:var(--mono);white-space:nowrap;padding-top:2px;color:var(--txt-faint)}
+  .cal-cd.soon{color:var(--amber)}
+  .cal-cd.urgent{color:var(--red);font-weight:700}
+  .cal-hint{color:var(--txt-faint);font-size:12px;padding:6px 0}
+
   footer{margin-top:30px;color:var(--txt-faint);font-size:11px;text-align:center;line-height:1.7}
   .disc{max-width:720px;margin:14px auto 0;font-size:10.5px;color:var(--txt-faint);
     border-top:1px solid var(--line-soft);padding-top:14px;line-height:1.6}
@@ -391,6 +444,7 @@
         <div class="tools">
           <div class="mono" style="font-size:11px;color:var(--txt-faint)" id="posCount"></div>
           <span class="file-status" id="fileStatus">未绑定 JSON</span>
+          <button class="ghost" id="aiAnalyzeBtn" title="AI Analysis">✦ AI</button>
           <div class="toolstack">
             <button class="ghost" id="refreshAllDataBtn">批量刷新报价 / EOD</button>
             <div class="toolhint" id="refreshDataStatus">最新更新：—</div>
@@ -409,9 +463,34 @@
       <div class="body" id="posList"></div>
     </div>
   </div>
+
+  <!-- Economic Calendar -->
+  <div class="card" id="calendarCard" style="margin-top:18px">
+    <div class="head">
+      <div class="t" data-i18n="calTitle">经济日历</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="mono" id="calMeta" style="font-size:11px;color:var(--txt-faint)"></div>
+        <button class="ghost" id="calRefreshBtn" data-i18n="calRefresh">刷新</button>
+      </div>
+    </div>
+    <div class="body" id="calBody" style="padding:8px 18px 14px">
+      <div class="cal-hint" data-i18n="calInit">点击刷新加载经济日历</div>
+    </div>
+  </div>
   </section>
 
   <section class="page hide" id="historyPage">
+    <div class="summary" id="historySummary" style="margin-bottom:18px"></div>
+    <div class="card" id="monthlyChartCard" style="margin-bottom:18px;display:none">
+      <div class="head">
+        <div class="t" data-i18n="monthlyChartTitle">月度净收益</div>
+        <div class="mono" style="font-size:11px;color:var(--txt-faint)" id="monthlyChartMeta"></div>
+      </div>
+      <div class="body" style="padding:10px 18px 14px">
+        <div id="monthlyChart"></div>
+        <div style="margin-top:6px;font-size:10.5px;color:var(--txt-faint)" data-i18n="monthlyChartHint">按平仓日汇总 · 悬停查看月度详情</div>
+      </div>
+    </div>
     <div class="grid form-collapsed" id="historyGrid">
       <div class="card form-card collapsed" id="historyFormCard">
         <div class="head"><div class="t" data-i18n="closedTradeTitle">录入历史交易 / Closed Trade</div><button class="ghost" id="toggleHistoryFormBtn">展开</button></div>
@@ -449,6 +528,23 @@
   </section>
 
   <input id="importFile" type="file" accept="application/json,.json" style="display:none">
+
+  <div class="ai-overlay" id="aiOverlay">
+    <div class="ai-modal">
+      <div class="ai-modal-head">
+        <div style="display:flex;align-items:center">
+          <span class="t" data-i18n="aiTitle">AI 持仓分析</span>
+          <span class="provider" id="aiProvider"></span>
+        </div>
+        <button class="ghost" id="aiCloseBtn">✕</button>
+      </div>
+      <div class="ai-modal-body" id="aiBody"></div>
+      <div class="ai-modal-foot">
+        <button class="ghost" id="aiRetryBtn" data-i18n="aiRetry">重新分析</button>
+        <button class="ghost" id="aiCloseBtn2" data-i18n="aiClose">关闭</button>
+      </div>
+    </div>
+  </div>
 
   <footer>
     <span data-i18n="footerMain">数据默认保存在浏览器本地；绑定 JSON 后会实时写入所选文件。EOD 正股价格通过本地 Python/yfinance 服务抓取。盈亏按 已收权利金 − 当前 mark 计算，正值=对卖方有利。</span>
@@ -778,12 +874,33 @@ const UI_TEXT = {
   cloudLogin:['登录','Sign In'],
   cloudSignup:['注册','Sign Up'],
   cloudLogout:['退出登录','Sign Out'],
-  signupConfirmMsg:['注册成功。确认邮件已经发送到你的邮箱，请先点击邮件里的确认链接，然后再回来登录。','Signed up. A confirmation email has been sent to your inbox. Click the confirmation link first, then come back and sign in.']
-  ,
+  signupConfirmMsg:['注册成功。确认邮件已经发送到你的邮箱，请先点击邮件里的确认链接，然后再回来登录。','Signed up. A confirmation email has been sent to your inbox. Click the confirmation link first, then come back and sign in.'],
+  aiTitle:['AI 持仓分析','AI Position Analysis'],
+  aiRetry:['重新分析','Re-analyze'],
+  aiClose:['关闭','Close'],
+  aiBtn:['✦ AI','✦ AI'],
+  aiLoading:['正在分析持仓，请稍候...','Analyzing positions, please wait...'],
+  aiNoPositions:['没有可分析的持仓','No positions to analyze'],
+  aiError:['AI 分析失败','AI analysis failed'],
   modelInputs:['⚙ 可选 · 用于 Black-Scholes 衰减建模','Optional · Black-Scholes decay inputs'],
   modelHint:['填了正股价 + IV，工具会用 Black-Scholes 画出每日时间价值衰减曲线并估算日 theta。不填也能用，只追踪 DTE 和你手动更新的 mark。','With underlying + IV, the tool estimates Black-Scholes decay and daily theta. Without them, it still tracks DTE and manually updated marks.'],
   footerMain:['数据默认保存在浏览器本地；绑定 JSON 后会实时写入所选文件。EOD 正股价格通过本地 Python/yfinance 服务抓取。盈亏按 已收权利金 − 当前 mark 计算，正值=对卖方有利。','Data is saved locally by default; after binding JSON, changes are written to that file. EOD underlying prices come from the local Python/yfinance service. P/L is premium collected minus current mark; positive favors the seller.'],
-  footerDisc:['⚠️ 本工具仅用于记录与教学，不构成投资建议。Black-Scholes 衰减为理论估算（假设正股价与 IV 不变、欧式定价），真实期权价格受 IV 变化、skew、流动性、提前行权等影响，会偏离曲线。务必以券商实际报价为准。','This tool is for tracking and education only, not investment advice. Black-Scholes decay is a theoretical estimate assuming unchanged underlying and IV; real option prices can diverge due to IV shifts, skew, liquidity, and exercise risk. Use broker quotes as the source of truth.']
+  footerDisc:['⚠️ 本工具仅用于记录与教学，不构成投资建议。Black-Scholes 衰减为理论估算（假设正股价与 IV 不变、欧式定价），真实期权价格受 IV 变化、skew、流动性、提前行权等影响，会偏离曲线。务必以券商实际报价为准。','This tool is for tracking and education only, not investment advice. Black-Scholes decay is a theoretical estimate assuming unchanged underlying and IV; real option prices can diverge due to IV shifts, skew, liquidity, and exercise risk. Use broker quotes as the source of truth.'],
+  hsTrades:['历史交易','Trades'],
+  hsTotalPL:['已实现总 P/L','Total Realized P/L'],
+  hsWinRate:['胜率','Win Rate'],
+  hsAvgCapture:['平均权利金捕获','Avg Premium Capture'],
+  hsAvgAnn:['平均年化回报','Avg Annualized'],
+  hsAvgHeld:['平均持仓天数','Avg Holding Days'],
+  hsAvgRemDTE:['平均剩余 DTE 平仓','Avg DTE at Close'],
+  monthlyChartTitle:['月度净收益 / Monthly P&L','Monthly P&L'],
+  monthlyChartHint:['按平仓日汇总 · 悬停查看月度详情','Grouped by close date · hover for details'],
+  calTitle:['经济日历','Economic Calendar'],
+  calRefresh:['刷新','Refresh'],
+  calLoading:['加载中...','Loading...'],
+  calEmpty:['未来60天内无重大事件','No major events in the next 60 days'],
+  calError:['加载失败，请确认后端服务正在运行','Failed to load — is the local server running?'],
+  calInit:['点击刷新加载经济日历','Click Refresh to load the economic calendar']
 };
 const L = key => (UI.lang === 'en' ? UI_TEXT[key][1] : UI_TEXT[key][0]);
 const dual = (zh, en) => UI.lang === 'en' ? en : zh;
@@ -1008,6 +1125,8 @@ async function initCloud(){
     const cfgRes = await fetch('/api/config', {cache:'no-store'});
     const cfg = await cfgRes.json();
     Cloud.configured = !!(cfg.supabaseUrl && cfg.supabaseAnonKey);
+    Cloud.url = cfg.supabaseUrl || '';
+    Cloud.anonKey = cfg.supabaseAnonKey || '';
     if(!Cloud.configured){
       setCloudStatus(L('cloudNotConfigured'), '');
       updateCloudUi();
@@ -1025,6 +1144,7 @@ async function initCloud(){
     });
     Cloud.status = '';
     updateCloudUi();
+    fetchCalendar(); // upgrade calendar to Supabase source now that client is ready
   }catch(e){
     Cloud.configured = false;
     Cloud.ready = false;
@@ -1182,7 +1302,8 @@ function renderSummary(){
     const pl = totalPL(p); if(pl!=null) unreal+=pl;
     const th = dailyTheta(p); if(th!=null){ theta+=th; thetaKnown=true; }
   });
-  const ccy = POS.length? ccySym(POS[0].ccy):'$';
+  const _ccys = new Set(POS.map(p => p.ccy || 'USD'));
+  const ccy = _ccys.size > 1 ? '$' : ccySym([..._ccys][0] || 'USD');
   const yieldPct = cap ? collected / cap * 100 : null;
   const annualYieldPct = cap ? annualPremium / cap * 100 : null;
   $('summary').innerHTML = `
@@ -1291,7 +1412,7 @@ function posCard(p){
       <span class="pill dte ${dteCls}" title="${timeHint}">${dte<0?'Expired':dte+' DTE'} | ${held==null?'—':held+' DH'}</span>
       <div class="pill-row">
         <span class="pill otm ${spreadCls}">${spreadTag}</span>
-        <span class="pill iv ann">Ann ${fmtPct(ann,1)}</span>
+        <span class="pill iv ann">${dual('权利金','Prem')} ${sym}${fmt0(maxProfit(p))}</span>
         <span class="pill iv">IV ${p.iv==null||p.iv===''?'—':fmtPct(+p.iv,0)}</span>
         <span class="pill otm ${otmCls}">OTM ${otm==null?'—':fmtPct(otm,1)}</span>
       </div>
@@ -1429,7 +1550,133 @@ function historyRow(t){
       <td class="ctl"><button class="iconbtn" title="${dual('编辑','Edit')}" onclick="editHistory('${t.id}')">✎</button></td>
     </tr>${selected?historyDetail(t):''}`;
 }
+function renderMonthlyChart(){
+  const card = $('monthlyChartCard');
+  const el   = $('monthlyChart');
+  const meta = $('monthlyChartMeta');
+  if(!card || !el) return;
+
+  // group by close month
+  const byMonth = {};
+  const ccys = new Set();
+  HISTORY.forEach(t => {
+    if(!t.close) return;
+    const key = t.close.slice(0,7); // YYYY-MM
+    byMonth[key] = (byMonth[key] || 0) + tradePL(t);
+    ccys.add(t.ccy || 'USD');
+  });
+
+  const months = Object.keys(byMonth).sort().slice(-24);
+  if(!months.length){ card.style.display = 'none'; return; }
+  card.style.display = '';
+
+  const values  = months.map(m => byMonth[m]);
+  const maxPos  = Math.max(0, ...values);
+  const maxNeg  = Math.max(0, ...values.map(v => -v));
+  const range   = (maxPos + maxNeg) || 1;
+  const sym     = ccys.size > 1 ? '~$' : ccySym([...ccys][0] || 'USD');
+
+  // SVG layout
+  const W=640, H=148, pL=10, pR=10, pT=18, pB=30;
+  const iW=W-pL-pR, iH=H-pT-pB;
+  const zY = pT + (maxPos/range)*iH;           // y of zero baseline
+  const toY = v => zY - (v/range)*iH;
+
+  const n = months.length;
+  const slotW = iW/n;
+  const bw    = Math.max(4, Math.min(slotW*0.68, 44));
+  const showEvery = n > 15 ? 3 : n > 9 ? 2 : 1;
+
+  const nameOf = key => {
+    const [y,m] = key.split('-');
+    return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1]+" '"+y.slice(2);
+  };
+  const fmtV = v => (v>=0?'+':'')+sym+Math.round(v).toLocaleString('en-US');
+
+  let out = `<line x1="${pL}" y1="${zY.toFixed(1)}" x2="${W-pR}" y2="${zY.toFixed(1)}" stroke="var(--line)" stroke-width="1.5"/>`;
+
+  months.forEach((mo,i) => {
+    const v   = values[i];
+    const cx  = pL + slotW*(i+0.5);
+    const y1  = toY(v);
+    const top = Math.min(zY, y1);
+    const h   = Math.max(Math.abs(y1-zY), 2);
+    const fill= v>=0 ? 'var(--mint)' : 'var(--red)';
+
+    out += `<rect x="${(cx-bw/2).toFixed(1)}" y="${top.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" fill="${fill}" rx="2" opacity="0.82"><title>${nameOf(mo)}\n${fmtV(v)}</title></rect>`;
+
+    // value label when bar tall enough
+    if(h > 16){
+      const lv  = Math.abs(v) >= 1000 ? (v/1000).toFixed(1)+'k' : Math.round(v).toString();
+      const lbl = (v>=0?'+':'-')+sym.replace('~','')+Math.abs(lv).toString().replace('-','');
+      const ly  = v>=0 ? top-3 : top+h+11;
+      if(ly > pT+2 && ly < H-pB+2)
+        out += `<text x="${cx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" font-size="9" fill="${fill}" font-family="IBM Plex Mono,monospace" font-weight="600">${(v>=0?'+':'')}${sym.replace('~','')}${Math.abs(v)>=1000?(Math.abs(v)/1000).toFixed(1)+'k':Math.round(Math.abs(v))}</text>`;
+    }
+
+    // month label (skip if crowded)
+    if(i % showEvery === 0)
+      out += `<text x="${cx.toFixed(1)}" y="${H-4}" text-anchor="middle" font-size="9.5" fill="var(--txt-faint)" font-family="IBM Plex Sans,sans-serif">${nameOf(mo)}</text>`;
+  });
+
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto">${out}</svg>`;
+
+  const totalPL = values.reduce((a,b)=>a+b,0);
+  const posMonths = values.filter(v=>v>=0).length;
+  meta.textContent = `${months.length}${dual('个月','mo')} · ${posMonths}/${months.length} ${dual('盈利','profit')} · ${dual('合计','total')} ${(totalPL>=0?'+':'')+sym+Math.round(totalPL).toLocaleString('en-US')}`;
+}
+
+function renderHistorySummary(){
+  const el = $('historySummary');
+  if(!el) return;
+  if(!HISTORY.length){ el.innerHTML = ''; return; }
+
+  let totalPL = 0;
+  let wins = 0;
+  let captures = [], annuals = [], helds = [], remDTEs = [];
+  const ccys = new Set();
+
+  HISTORY.forEach(t => {
+    const pl = tradePL(t);
+    totalPL += pl;
+    if(pl >= 0) wins++;
+    ccys.add(t.ccy || 'USD');
+    const cap = premiumCapture(t);
+    if(cap != null) captures.push(cap);
+    const ann = historyAnnualized(t);
+    if(ann != null) annuals.push(ann);
+    const held = holdingDays(t.open, t.close);
+    if(held != null) helds.push(held);
+    const rem = t.close && t.exp ? Math.max(dteFrom(t.exp, t.close), 0) : null;
+    if(rem != null) remDTEs.push(rem);
+  });
+
+  const n = HISTORY.length;
+  const mixedCcy = ccys.size > 1;
+  const sym = mixedCcy ? '~$' : ccySym([...ccys][0] || 'USD');
+  const winRate = n ? wins / n * 100 : null;
+  const avgCapture = captures.length ? captures.reduce((a,b)=>a+b,0)/captures.length : null;
+  const avgAnn = annuals.length ? annuals.reduce((a,b)=>a+b,0)/annuals.length : null;
+  const avgHeld = helds.length ? helds.reduce((a,b)=>a+b,0)/helds.length : null;
+  const avgRemDTE = remDTEs.length ? remDTEs.reduce((a,b)=>a+b,0)/remDTEs.length : null;
+
+  const plPos = totalPL >= 0;
+  const cell = (key, val, cls='') =>
+    `<div class="scell"><div class="k">${L(key)}</div><div class="v ${cls}">${val}</div></div>`;
+
+  el.innerHTML =
+    cell('hsTrades', n) +
+    cell('hsTotalPL', (plPos?'+':'') + sym + fmt0(totalPL), plPos?'pos':'neg') +
+    cell('hsWinRate', winRate==null?'—':fmtPct(winRate,1), winRate>=70?'pos':winRate>=50?'':'neg') +
+    cell('hsAvgCapture', avgCapture==null?'—':fmtPct(avgCapture,1), avgCapture>=70?'pos':avgCapture>=50?'':'neg') +
+    cell('hsAvgAnn', avgAnn==null?'—':fmtPct(avgAnn,1), avgAnn>=0?'pos':'neg') +
+    cell('hsAvgHeld', avgHeld==null?'—':Math.round(avgHeld)+'d') +
+    cell('hsAvgRemDTE', avgRemDTE==null?'—':Math.round(avgRemDTE)+'d');
+}
+
 function renderHistory(){
+  renderHistorySummary();
+  renderMonthlyChart();
   $('historyCount').textContent = HISTORY.length ? HISTORY.length+' closed' : '';
   if(!HISTORY.length){
     $('historyList').innerHTML = `<div class="empty"><div class="big">${L('noHistoryTitle')}</div>${L('noHistoryBody')}</div>`;
@@ -1441,6 +1688,138 @@ function renderHistory(){
     <tbody>${rows}</tbody>
   </table>`;
 }
+function calcOpexDates(fromStr, toStr){
+  const events = [];
+  const to = new Date(toStr + 'T12:00:00');
+  let cur = new Date(fromStr + 'T12:00:00');
+  cur.setDate(1);
+  while(cur <= to){
+    let count = 0, d = 1;
+    while(count < 3){
+      if(new Date(cur.getFullYear(), cur.getMonth(), d).getDay() === 5) count++;
+      if(count < 3) d++;
+    }
+    const opexStr = new Date(cur.getFullYear(), cur.getMonth(), d).toISOString().slice(0, 10);
+    if(opexStr >= fromStr && opexStr <= toStr)
+      events.push({date: opexStr, type:'opex', title:'Monthly OPEX', risk:'low'});
+    cur.setMonth(cur.getMonth() + 1);
+  }
+  return events;
+}
+
+function renderCalEvents(events, el, meta){
+  const today = todayStr();
+  const posArr = POS.map(p=>({ticker:p.ticker, exp:p.exp}));
+  const noteZh = {
+    fomc:'美联储利率决议 — 市场波动性大幅上升，原则上应在事件前后平掉即将到期的持仓',
+    cpi:'通胀数据发布 — 可能影响市场方向与隐含波动率',
+    nfp:'非农就业报告 — 可能引发较大幅度市场波动',
+    opex:'月度期权标准到期日（每月第三个周五）— 许多合约在此日到期',
+  };
+  const noteEn = {
+    fomc:'Fed rate decision — close at-risk positions before; high volatility expected',
+    cpi:'Inflation data — may spike IV and shift market direction',
+    nfp:'Employment report — potential large market move',
+    opex:'Standard monthly options expiry (3rd Friday) — many contracts expire today',
+  };
+  if(!events.length){ el.innerHTML = `<div class="cal-hint">${L('calEmpty')}</div>`; return; }
+  let html = '', lastMonth = '';
+  events.forEach(ev=>{
+    const mo = ev.date.slice(0,7);
+    if(mo !== lastMonth){
+      const [y,m] = mo.split('-');
+      const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1];
+      html += `<div class="cal-sep">${mn} ${y}</div>`;
+      lastMonth = mo;
+    }
+    const daysTo = Math.round((new Date(ev.date+'T12:00:00')-new Date(today+'T12:00:00'))/86400000);
+    const cdLabel = daysTo===0?dual('今天','Today'):daysTo===1?dual('明天','Tmrw'):daysTo+'d';
+    const cdCls = daysTo<=3?'urgent':daysTo<=7?'soon':'';
+    const affected = posArr.filter(p=>{
+      if(!p.exp) return false;
+      if(ev.type==='earnings'&&ev.ticker) return p.ticker===ev.ticker && ev.date<=p.exp;
+      if(ev.type==='opex') return p.exp===ev.date;
+      const diff = Math.round((new Date(p.exp+'T12:00:00')-new Date(ev.date+'T12:00:00'))/86400000);
+      return diff>=0 && diff<=7;
+    });
+    const tks = [...new Set(affected.map(p=>p.ticker).filter(Boolean))];
+    const badge = tks.length ? `<span class="cal-badge">⚠ ${tks.slice(0,3).join(' ')}${tks.length>3?'…':''}</span>` : '';
+    const note = ev.type==='earnings'
+      ? (UI.lang==='zh' ? `${ev.ticker} 财报发布 — 建议在财报前平掉 ${ev.ticker} 的 Sell Put 持仓` : `${ev.ticker} earnings — close or roll ${ev.ticker} short puts before`)
+      : (UI.lang==='zh' ? noteZh[ev.type] : noteEn[ev.type]) || '';
+    html += `<div class="cal-event">
+      <div class="cal-left"><div class="cal-dot ${ev.type}"></div><div class="cal-mday">${ev.date.slice(5).replace('-','/')}</div></div>
+      <div class="cal-info"><div class="cal-title">${ev.title}${badge}</div><div class="cal-note">${note}</div></div>
+      <div class="cal-cd ${cdCls}">${cdLabel}</div>
+    </div>`;
+  });
+  el.innerHTML = html;
+}
+
+let _calSeq = 0;
+async function fetchCalendar(){
+  const seq = ++_calSeq;
+  const el = $('calBody'), meta = $('calMeta');
+  if(!el) return;
+  el.innerHTML = `<div class="cal-hint">${L('calLoading')}</div>`;
+
+  const today = todayStr();
+  const endDate = new Date(today + 'T12:00:00');
+  endDate.setDate(endDate.getDate() + 60);
+  const endStr = endDate.toISOString().slice(0, 10);
+  const tickers = [...new Set(POS.map(p=>p.ticker).filter(Boolean))];
+
+  let events = [];
+  let macroSource = '';
+  try {
+    if(Cloud.ready && Cloud.url && Cloud.anonKey){
+      const sbUrl = `${Cloud.url}/rest/v1/econ_events?select=date,type,title,risk&date=gte.${today}&date=lte.${endStr}&order=date`;
+      const sbRes = await fetch(sbUrl, {
+        headers: { 'apikey': Cloud.anonKey, 'Authorization': `Bearer ${Cloud.anonKey}` }
+      });
+      if(!sbRes.ok){
+        if(meta) meta.textContent = `Supabase error: ${sbRes.status}`;
+        return;
+      }
+      const sbData = await sbRes.json();
+      events.push(...(Array.isArray(sbData) ? sbData : []));
+      macroSource = 'Supabase';
+    } else {
+      const res = await fetch('/api/econ_calendar?days=60');
+      if(res.ok){
+        const d = await res.json();
+        events.push(...(d.events || []).filter(e => e.type !== 'earnings'));
+      }
+      macroSource = 'server';
+    }
+
+    // OPEX always calculated client-side
+    events.push(...calcOpexDates(today, endStr));
+
+    // Earnings always from server (yfinance)
+    if(tickers.length){
+      const res = await fetch(`/api/econ_calendar?tickers=${encodeURIComponent(tickers.join(','))}&days=60&earnings_only=1`);
+      if(res.ok){ const d = await res.json(); events.push(...(d.events || []).filter(e=>e.type==='earnings')); }
+    }
+
+    // Deduplicate + sort
+    const seen = new Set();
+    events = events.filter(e=>{
+      const k = `${e.date}:${e.type}:${e.ticker||''}`;
+      if(seen.has(k)) return false;
+      seen.add(k); return true;
+    }).sort((a,b)=>a.date.localeCompare(b.date));
+
+    if(seq !== _calSeq) return; // superseded by a newer call
+    if(meta) meta.textContent = `${events.length} ${dual('个事件','events')} · 60${dual('天','d')} · ${macroSource}`;
+    renderCalEvents(events, el, meta);
+  } catch(e){
+    if(seq !== _calSeq) return;
+    el.innerHTML = `<div class="cal-hint">${L('calError')}: ${e.message}</div>`;
+    if(meta) meta.textContent = '';
+  }
+}
+
 function renderAll(){
   render();
   renderHistory();
@@ -1545,6 +1924,8 @@ window.closePosition = async id => {
   renderAll();
 };
 
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
 async function fetchEod(ticker){
   const res = await fetch(`/api/eod?ticker=${encodeURIComponent(ticker)}`, {cache:'no-store'});
   let data = null;
@@ -1593,7 +1974,9 @@ async function refreshFormIv(){
 async function refreshAllOptionQuotes(silent){
   if(!POS.length) return [];
   const failed = [];
-  for(const p of POS){
+  for(let i = 0; i < POS.length; i++){
+    if(i > 0) await sleep(500);
+    const p = POS[i];
     try{
       const q = await fetchOptionQuote(p);
       applyOptionQuote(p, q);
@@ -1614,7 +1997,9 @@ async function refreshAllMarketData(silent){
   const quoteFailed = [];
   const eodFailed = [];
   const tickers = [...new Set(POS.map(p => (p.ticker || '').toUpperCase()).filter(Boolean))];
+  let reqIdx = 0;
   for(const p of POS){
+    if(reqIdx++ > 0) await sleep(500);
     try{
       const q = await fetchOptionQuote(p);
       applyOptionQuote(p, q);
@@ -1623,6 +2008,7 @@ async function refreshAllMarketData(silent){
     }
   }
   for(const ticker of tickers){
+    if(reqIdx++ > 0) await sleep(500);
     try{
       const data = await fetchEod(ticker);
       applyEod(data.ticker, data.close, data.date);
@@ -2050,6 +2436,8 @@ window.editHistory = async id => {
     setFileStatus(FileStore.supported ? dual('本地已保存 · 未绑定 JSON','Saved locally · JSON not bound') : dual('本地已保存 · 浏览器不支持直写 JSON','Saved locally · direct JSON write unsupported'), '');
   }
   renderAll();
+  fetchCalendar();
+  $('calRefreshBtn').onclick = fetchCalendar;
   if(POS.length){
     setFileStatus(dual('正在自动刷新期权报价...','Auto-refreshing option quotes...'), '');
     refreshAllOptionQuotes(true).then(failed=>{
