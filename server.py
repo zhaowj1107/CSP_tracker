@@ -7,6 +7,8 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 from zoneinfo import ZoneInfo
 
+import time as _time
+
 import requests as http_requests
 
 
@@ -32,6 +34,32 @@ YF_CACHE = ROOT / ".yfinance_cache"
 YAHOO_ALIASES = {
     "SOI": "SOI.PA",
 }
+
+# ── In-memory yfinance cache ──────────────────────────────────────────────────
+_EOD_CACHE: dict = {}    # ticker -> {payload, ts}
+_QUOTE_CACHE: dict = {}  # (ticker, expiry, strike, type) -> {payload, ts}
+EOD_TTL   = 4 * 3600   # 4 h  — EOD prices from closed sessions don't change
+QUOTE_TTL = 15 * 60    # 15 min — option quotes change during the session
+
+def _cache_get(store, key, ttl):
+    entry = store.get(key)
+    if entry and _time.monotonic() - entry["ts"] < ttl:
+        return entry["data"]
+    return None
+
+def _cache_set(store, key, data):
+    store[key] = {"data": data, "ts": _time.monotonic()}
+
+def _yf_retry(fn, retries=3):
+    """Call fn(); on exception retry with 2 s → 4 s delays before giving up."""
+    for attempt in range(retries):
+        try:
+            return fn()
+        except Exception as exc:
+            if attempt == retries - 1:
+                raise
+            _time.sleep(2 * (attempt + 1))
+    raise RuntimeError("unreachable")
 
 FOMC_DATES = [
     "2025-01-29","2025-03-19","2025-05-07","2025-06-18",
@@ -344,6 +372,10 @@ class CSPHandler(SimpleHTTPRequestHandler):
         if not ticker:
             return self.send_json(400, {"error": "Missing ticker"})
 
+        cached = _cache_get(_EOD_CACHE, ticker, EOD_TTL)
+        if cached:
+            return self.send_json(200, {**cached, "source": "yfinance/cache"})
+
         try:
             import yfinance as yf
         except ModuleNotFoundError:
@@ -355,14 +387,14 @@ class CSPHandler(SimpleHTTPRequestHandler):
         errors = []
         for yahoo_symbol in yahoo_symbols(ticker):
             try:
-                hist = yf.download(
-                    yahoo_symbol,
+                hist = _yf_retry(lambda s=yahoo_symbol: yf.download(
+                    s,
                     period="10d",
                     interval="1d",
                     auto_adjust=False,
                     progress=False,
                     threads=False,
-                )
+                ))
                 if hist.empty or "Close" not in hist:
                     errors.append(f"{yahoo_symbol}: no EOD data")
                     continue
@@ -383,13 +415,14 @@ class CSPHandler(SimpleHTTPRequestHandler):
                     last_date = close.index[-1]
 
                 price = float(close.iloc[-1])
-                return self.send_json(200, {
+                payload = {
                     "ticker": ticker,
                     "yahooSymbol": yahoo_symbol,
                     "date": last_date.strftime("%Y-%m-%d"),
                     "close": round(price, 4),
-                    "source": "yfinance",
-                })
+                }
+                _cache_set(_EOD_CACHE, ticker, payload)
+                return self.send_json(200, {**payload, "source": "yfinance"})
             except Exception as exc:
                 errors.append(f"{yahoo_symbol}: {exc}")
         return self.send_json(502, {"error": "; ".join(errors) or f"No EOD data found for {ticker}"})
@@ -407,6 +440,11 @@ class CSPHandler(SimpleHTTPRequestHandler):
         if not ticker or not expiry or opt_type not in {"put", "call"}:
             return self.send_json(400, {"error": "Missing ticker, expiry, or type"})
 
+        cache_key = (ticker, expiry, strike, opt_type)
+        cached = _cache_get(_QUOTE_CACHE, cache_key, QUOTE_TTL)
+        if cached:
+            return self.send_json(200, {**cached, "source": "yfinance/cache"})
+
         try:
             import yfinance as yf
         except ModuleNotFoundError:
@@ -419,7 +457,7 @@ class CSPHandler(SimpleHTTPRequestHandler):
         for yahoo_symbol in yahoo_symbols(ticker):
             try:
                 tk = yf.Ticker(yahoo_symbol)
-                expirations = list(tk.options)
+                expirations = _yf_retry(lambda t=tk: list(t.options))
                 if not expirations:
                     errors.append(f"{yahoo_symbol}: no option expirations")
                     continue
@@ -427,7 +465,7 @@ class CSPHandler(SimpleHTTPRequestHandler):
                     errors.append(f"{yahoo_symbol}: expiry {expiry} not found; available {', '.join(expirations[:6])}")
                     continue
 
-                chain = tk.option_chain(expiry)
+                chain = _yf_retry(lambda t=tk: t.option_chain(expiry))
                 df = chain.calls if opt_type == "call" else chain.puts
                 if df.empty:
                     errors.append(f"{yahoo_symbol}: no {opt_type} chain")
@@ -453,7 +491,7 @@ class CSPHandler(SimpleHTTPRequestHandler):
                 spread = round(ask - bid, 4) if bid is not None and ask is not None else None
                 spread_pct = round(spread / mid * 100, 2) if spread is not None and mid else None
 
-                return self.send_json(200, {
+                payload = {
                     "ticker": ticker,
                     "yahooSymbol": yahoo_symbol,
                     "type": opt_type,
@@ -472,8 +510,9 @@ class CSPHandler(SimpleHTTPRequestHandler):
                     "spreadPct": spread_pct,
                     "openInterest": int(row["openInterest"]) if row.get("openInterest") == row.get("openInterest") else None,
                     "volume": int(row["volume"]) if row.get("volume") == row.get("volume") else None,
-                    "source": "yfinance",
-                })
+                }
+                _cache_set(_QUOTE_CACHE, cache_key, payload)
+                return self.send_json(200, {**payload, "source": "yfinance"})
             except Exception as exc:
                 errors.append(f"{yahoo_symbol}: {exc}")
         return self.send_json(404, {"error": "; ".join(errors) or f"No option data found for {ticker}"})
