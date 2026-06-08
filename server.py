@@ -372,7 +372,15 @@ class CSPHandler(SimpleHTTPRequestHandler):
         if not ticker:
             return self.send_json(400, {"error": "Missing ticker"})
 
+        market_now = datetime.now(ZoneInfo("America/New_York"))
+        after_close = market_now.time() >= time(16, 30)
         cached = _cache_get(_EOD_CACHE, ticker, EOD_TTL)
+        if cached:
+            cached_date = cached.get("date", "")
+            today_str = market_now.strftime("%Y-%m-%d")
+            # Invalidate if cached date is stale and market has already closed
+            if cached_date < today_str and after_close:
+                cached = None
         if cached:
             return self.send_json(200, {**cached, "source": "yfinance/cache"})
 
@@ -408,9 +416,8 @@ class CSPHandler(SimpleHTTPRequestHandler):
                     continue
 
                 last_date = close.index[-1]
-                market_now = datetime.now(ZoneInfo("America/New_York"))
                 current_session = last_date.date() == market_now.date()
-                if current_session and market_now.time() < time(17, 30) and len(close) > 1:
+                if current_session and not after_close and len(close) > 1:
                     close = close.iloc[:-1]
                     last_date = close.index[-1]
 
