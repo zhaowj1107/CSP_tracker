@@ -1462,6 +1462,15 @@ function posCard(p){
         ${!haveModel?`<div class="notewarn">${dual('未填正股价/IV，曲线为<b>简化线性衰减</b>占位，衰减读数为均摊值。填入正股价和 IV 可看 Black-Scholes 真实凸形衰减曲线 + 每日 theta。','Underlying/IV is missing, so this uses a <b>simplified linear decay</b> placeholder. Add underlying and IV for a Black-Scholes decay curve and daily theta.')}</div>`:''}
       </div>
 
+      <div class="markrow">
+        <div class="field"><label>${dual('更新当前 Mark（券商报价）','Update Current Mark')}</label><input class="mono" type="number" step="any" id="mk_${p.id}" value="${p.mark!=null?p.mark:''}" placeholder="${mark!=null?fmt(mark,2):dual('输入实时报价','Enter live quote')}"></div>
+        <button class="mini" onclick="saveMark('${p.id}')">${L('saveMark')}</button>
+        <button class="mini" onclick="refreshOptionQuote('${p.id}')">${L('fetchQuote')}</button>
+        <button class="mini" onclick="refreshEod('${p.id}')">${L('fetchEod')}</button>
+        ${haveModel?`<button class="mini" onclick="updUnder('${p.id}')">${L('updateUnderIv')}</button>`:''}
+      </div>
+      <div class="eod-status" id="eod_${p.id}"></div>
+
       ${haveModel?`
       <div class="simwrap" data-pid="${p.id}">
         <div class="ct" style="font-size:11px;color:var(--txt-dim);margin-bottom:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -1480,14 +1489,6 @@ function posCard(p){
         <div class="readout" id="sim_${p.id}"></div>
       </div>`:''}
 
-      <div class="markrow">
-        <div class="field"><label>${dual('更新当前 Mark（券商报价）','Update Current Mark')}</label><input class="mono" type="number" step="any" id="mk_${p.id}" value="${p.mark!=null?p.mark:''}" placeholder="${mark!=null?fmt(mark,2):dual('输入实时报价','Enter live quote')}"></div>
-        <button class="mini" onclick="saveMark('${p.id}')">${L('saveMark')}</button>
-        <button class="mini" onclick="refreshOptionQuote('${p.id}')">${L('fetchQuote')}</button>
-        <button class="mini" onclick="refreshEod('${p.id}')">${L('fetchEod')}</button>
-        ${haveModel?`<button class="mini" onclick="updUnder('${p.id}')">${L('updateUnderIv')}</button>`:''}
-      </div>
-      <div class="eod-status" id="eod_${p.id}"></div>
       <div style="display:flex;justify-content:space-between;align-items:center">
         <span></span>
         <span style="display:flex;gap:8px">
