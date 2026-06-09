@@ -227,6 +227,13 @@
   @media(max-width:560px){.readout{grid-template-columns:repeat(2,1fr)}}
   .notewarn{font-size:10.5px;color:var(--amber-soft);background:rgba(240,169,59,.07);
     border:1px solid rgba(240,169,59,.2);border-radius:8px;padding:8px 10px;margin-top:4px;line-height:1.5}
+  .simwrap{margin:12px 0 10px}
+  .simrow{display:grid;grid-template-columns:64px 1fr 132px;gap:11px;align-items:center;margin-bottom:9px}
+  .simrow label{font-size:10px;color:var(--txt-faint);letter-spacing:.4px;text-transform:uppercase}
+  .simrow input[type=range]{width:100%;accent-color:var(--blue);cursor:pointer;height:4px;margin:0}
+  .simrow .simval{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--amber-soft);
+    text-align:right;font-variant-numeric:tabular-nums}
+  @media(max-width:560px){.simrow{grid-template-columns:52px 1fr 112px;gap:8px}}
   @media(max-width:640px){
     .wrap{padding:16px 10px 56px}
     header{align-items:flex-start;margin-bottom:16px;gap:12px}
@@ -790,10 +797,11 @@ function bsCall(S,K,T,r,sig){
 function optType(p){ return p.type === 'call' ? 'call' : 'put'; }
 function optCode(p){ return optType(p) === 'call' ? 'C' : 'P'; }
 function optLabel(p){ return optType(p) === 'call' ? 'Sell Call' : 'Sell Put'; }
-function bsOption(p,T){
-  const S=+p.under, K=+p.strike, r=(+p.rate||0)/100, sig=(+p.iv)/100;
+function bsOptionAt(p,S,T){ // BS option value at an explicit underlying S and time-to-expiry T (years)
+  const K=+p.strike, r=(+p.rate||0)/100, sig=(+p.iv)/100;
   return optType(p) === 'call' ? bsCall(S,K,T,r,sig) : bsPut(S,K,T,r,sig);
 }
+function bsOption(p,T){ return bsOptionAt(p, +p.under, T); }
 
 //=================== helpers ===================
 const $ = id => document.getElementById(id);
@@ -1402,6 +1410,13 @@ function posCard(p){
     ? `<div style="margin:6px 0 10px"><span class="pill otm ${otm<10||dte<7?'crit':'warn'}">${dual('风险提示：DTE<21 且 OTM<15%，关注平仓/展期','Risk alert: DTE<21 and OTM<15%; consider close or roll')}</span></div>`
     : '';
   const mobileLine1 = `${p.ticker||'—'} ${fmt(p.strike,0)}${optionCode}*${p.qty} ${dte<0?'Expired':dte+' DTE'} | ${held==null?'—':held+' DH'}`;
+  // what-if simulator slider domains (only meaningful when haveModel)
+  const simOpen = p.open||todayStr();
+  const simTotal = Math.max(dteFrom(p.exp, simOpen), 1);
+  const simElapsed = Math.min(Math.max(dteFrom(todayStr(), simOpen), 0), simTotal);
+  const simLo = haveModel ? +(+p.under*0.7).toFixed(2) : 0;
+  const simHi = haveModel ? +(+p.under*1.3).toFixed(2) : 0;
+  const simStep = haveModel ? +((simHi-simLo)/200).toFixed(4) : 1;
   const sel = p.id===selId;
   return `
   <div class="position-card ${sel?'sel':''}" data-id="${p.id}">
@@ -1447,6 +1462,24 @@ function posCard(p){
         ${!haveModel?`<div class="notewarn">${dual('未填正股价/IV，曲线为<b>简化线性衰减</b>占位，衰减读数为均摊值。填入正股价和 IV 可看 Black-Scholes 真实凸形衰减曲线 + 每日 theta。','Underlying/IV is missing, so this uses a <b>simplified linear decay</b> placeholder. Add underlying and IV for a Black-Scholes decay curve and daily theta.')}</div>`:''}
       </div>
 
+      ${haveModel?`
+      <div class="simwrap" data-pid="${p.id}">
+        <div class="ct" style="font-size:11px;color:var(--txt-dim);margin-bottom:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          ${dual('情景模拟','What-if Simulator')} <span style="color:var(--txt-faint);font-size:10px">· ${dual('假设某一天、标的为某价位时的期权价与回报','assume a date & underlying price → option value and return')}</span>
+        </div>
+        <div class="simrow">
+          <label>${dual('日期','Date')}</label>
+          <input type="range" id="simd_${p.id}" min="0" max="${simTotal}" step="1" value="${simElapsed}">
+          <span class="simval" id="simdv_${p.id}"></span>
+        </div>
+        <div class="simrow">
+          <label>${dual('标的价','Underlying')}</label>
+          <input type="range" id="sims_${p.id}" min="${simLo}" max="${simHi}" step="${simStep}" value="${+(+p.under).toFixed(2)}">
+          <span class="simval" id="simsv_${p.id}"></span>
+        </div>
+        <div class="readout" id="sim_${p.id}"></div>
+      </div>`:''}
+
       <div class="markrow">
         <div class="field"><label>${dual('更新当前 Mark（券商报价）','Update Current Mark')}</label><input class="mono" type="number" step="any" id="mk_${p.id}" value="${p.mark!=null?p.mark:''}" placeholder="${mark!=null?fmt(mark,2):dual('输入实时报价','Enter live quote')}"></div>
         <button class="mini" onclick="saveMark('${p.id}')">${L('saveMark')}</button>
@@ -1477,6 +1510,7 @@ function render(){
   const sorted=[...POS].sort((a,b)=>dteFrom(a.exp)-dteFrom(b.exp));
   $('posList').innerHTML = sorted.map(posCard).join('');
   wireCharts();
+  wireSimulators();
 }
 
 function tradePL(t){
@@ -1824,6 +1858,56 @@ function renderAll(){
   render();
   renderHistory();
   updateRefreshStatus();
+}
+
+//=================== interactive what-if simulator ===================
+function wireSimulators(){
+  document.querySelectorAll('.simwrap').forEach(wrap=>{
+    const pid = wrap.dataset.pid;
+    const p = POS.find(x=>x.id===pid);
+    if(!p) return;
+    const dSlider = document.getElementById('simd_'+pid);
+    const sSlider = document.getElementById('sims_'+pid);
+    const out = document.getElementById('sim_'+pid);
+    const dval = document.getElementById('simdv_'+pid);
+    const sval = document.getElementById('simsv_'+pid);
+    if(!dSlider||!sSlider||!out) return;
+    const open = p.open||todayStr();
+    const total = Math.max(dteFrom(p.exp, open),1);
+    const curUnder = +p.under;
+    const curMark = currentMark(p);
+    const cap = capital(p);
+    const sym = ccySym(p.ccy);
+    const m = n => (n>=0?'+':'')+sym+Math.round(n).toLocaleString('en-US');
+    const cls = n => n>=0?'pos':'neg';
+    const signPct = (n,d=1)=> (n>=0?'+':'')+n.toFixed(d)+'%';
+
+    function update(){
+      const day = +dSlider.value;
+      const S = +sSlider.value;
+      const dt = new Date(open+'T00:00:00'); dt.setDate(dt.getDate()+day);
+      const ds = dt.toISOString().slice(0,10);
+      const rem = total - day;                 // DTE at the scenario date
+      const T = Math.max(rem,0)/365;
+      const price = bsOptionAt(p, S, T);
+      const pl = (p.prem - price)*p.qty*p.mult;
+      const capturePct = p.prem ? (p.prem - price)/p.prem*100 : null;
+      const rocPct = cap ? pl/cap*100 : null;
+      const underChg = curUnder ? (S-curUnder)/curUnder*100 : null;
+      const priceChg = curMark ? (price-curMark)/curMark*100 : null;
+      dval.textContent = `${ds} · ${rem}d`;
+      sval.textContent = `${sym}${S.toFixed(2)}${underChg==null?'':' ('+signPct(underChg)+')'}`;
+      out.innerHTML = `
+        <div class="rd"><span>${ds} · ${dual('剩','DTE')} ${Math.max(rem,0)}d</span><span>${dual('标的','Under')} ${sym}${S.toFixed(2)}${underChg==null?'':' ('+signPct(underChg)+')'}</span></div>
+        <div class="rc"><div class="rk">${dual('情景期权价','Scenario Price')}</div><div class="rv">${sym}${price.toFixed(2)}<br><span style="font-size:9.5px;color:var(--txt-faint)">${curMark==null?dual('当前 —','cur —'):dual('当前','cur')+' '+sym+curMark.toFixed(2)+(priceChg==null?'':' (Δ'+signPct(priceChg,0)+')')}</span></div></div>
+        <div class="rc"><div class="rk">${dual('情景盈亏','Scenario P/L')}</div><div class="rv ${cls(pl)}">${m(pl)}</div></div>
+        <div class="rc"><div class="rk">${dual('权利金捕获','Premium Capture')}</div><div class="rv ${cls(capturePct||0)}">${capturePct==null?'—':signPct(capturePct,0)}</div></div>
+        <div class="rc"><div class="rk">${dual('资金回报','Return on Capital')}</div><div class="rv ${cls(rocPct||0)}">${rocPct==null?'—':signPct(rocPct)}</div></div>`;
+    }
+    dSlider.addEventListener('input', update);
+    sSlider.addEventListener('input', update);
+    update();
+  });
 }
 
 //=================== interactive decay scrubber ===================
