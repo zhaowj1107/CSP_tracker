@@ -166,7 +166,7 @@
   .mobile-pos-line1{display:none}
 
   .pdetail{padding:0 15px;max-height:0;overflow:hidden;transition:max-height .3s ease,padding .3s ease}
-  .position-card.sel .pdetail{max-height:760px;padding:4px 15px 16px}
+  .position-card.sel .pdetail{max-height:1000px;padding:4px 15px 16px}
   .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line-soft);
     border:1px solid var(--line-soft);border-radius:10px;overflow:hidden;margin:8px 0 14px}
   .m{background:var(--panel);padding:10px 11px}
@@ -224,6 +224,11 @@
   .readout .rc .rk{font-size:9px;color:var(--txt-faint);letter-spacing:.4px;text-transform:uppercase}
   .readout .rc .rv{font-size:13px;font-weight:500;margin-top:4px;font-variant-numeric:tabular-nums}
   .readout .rc .rv.pos{color:var(--mint)} .readout .rc .rv.neg{color:var(--red)}
+  .readout.simout{grid-template-columns:repeat(3,1fr)}
+  .readout .rc .rv .simprice{font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
+  .readout .rc .rv .simchg{font-size:12px;margin-left:5px;font-variant-numeric:tabular-nums}
+  .readout .rc .rv .simchg.pos{color:var(--mint)} .readout .rc .rv .simchg.neg{color:var(--red)}
+  .readout .rc .rv .simcur{font-size:9.5px;color:var(--txt-faint)}
   @media(max-width:560px){.readout{grid-template-columns:repeat(2,1fr)}}
   .notewarn{font-size:10.5px;color:var(--amber-soft);background:rgba(240,169,59,.07);
     border:1px solid rgba(240,169,59,.2);border-radius:8px;padding:8px 10px;margin-top:4px;line-height:1.5}
@@ -233,7 +238,15 @@
   .simrow input[type=range]{width:100%;accent-color:var(--blue);cursor:pointer;height:4px;margin:0}
   .simrow .simval{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--amber-soft);
     text-align:right;font-variant-numeric:tabular-nums}
-  @media(max-width:560px){.simrow{grid-template-columns:52px 1fr 112px;gap:8px}}
+  .simrow.dateRow,.simrow.underRow{grid-template-columns:64px 1fr auto}
+  .simdate-right{display:flex;align-items:center;gap:8px;justify-content:flex-end;min-width:0}
+  .simrow .simrel{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--blue);
+    min-width:40px;text-align:right;font-variant-numeric:tabular-nums}
+  .sim-today{font-size:10.5px;padding:3px 9px;border-radius:7px;border:1px solid var(--line);
+    background:var(--panel);color:var(--txt-dim);cursor:pointer;white-space:nowrap;font-family:inherit}
+  .sim-today:hover{border-color:var(--blue);color:var(--blue)}
+  @media(max-width:560px){.simrow{grid-template-columns:52px 1fr 112px;gap:8px}
+    .simrow.dateRow,.simrow.underRow{grid-template-columns:52px 1fr auto}}
   @media(max-width:640px){
     .wrap{padding:16px 10px 56px}
     header{align-items:flex-start;margin-bottom:16px;gap:12px}
@@ -453,7 +466,7 @@
           <span class="file-status" id="fileStatus">未绑定 JSON</span>
           <button class="ghost" id="aiAnalyzeBtn" title="AI Analysis">✦ AI</button>
           <div class="toolstack">
-            <button class="ghost" id="refreshAllDataBtn">批量刷新报价 / EOD</button>
+            <button class="ghost" id="refreshAllDataBtn">更新数据</button>
             <div class="toolhint" id="refreshDataStatus">最新更新：—</div>
           </div>
           <div class="menuwrap">
@@ -802,6 +815,18 @@ function bsOptionAt(p,S,T){ // BS option value at an explicit underlying S and t
   return optType(p) === 'call' ? bsCall(S,K,T,r,sig) : bsPut(S,K,T,r,sig);
 }
 function bsOption(p,T){ return bsOptionAt(p, +p.under, T); }
+function impliedVol(p, price){ // back out IV (as %) from an option price; null if not solvable
+  const S=+p.under, K=+p.strike, r=(+p.rate||0)/100;
+  const T=Math.max(dteFrom(p.exp),0)/365;
+  if(!(S>0 && K>0 && T>0 && price>0)) return null;
+  const bs = sig => optType(p)==='call' ? bsCall(S,K,T,r,sig) : bsPut(S,K,T,r,sig);
+  const intrinsic = optType(p)==='call' ? Math.max(S-K,0) : Math.max(K-S,0);
+  if(price <= intrinsic + 1e-4) return null;   // at/below intrinsic — no time value to imply vol from
+  let lo=1e-4, hi=5;                            // search 0.01% .. 500% (bs is monotonic in vol)
+  if(bs(hi) < price) return null;               // price too rich for any reasonable vol
+  for(let i=0;i<64;i++){ const mid=(lo+hi)/2; if(bs(mid) < price) lo=mid; else hi=mid; }
+  return +(((lo+hi)/2)*100).toFixed(2);
+}
 
 //=================== helpers ===================
 const $ = id => document.getElementById(id);
@@ -837,7 +862,7 @@ const UI_TEXT = {
   settingsBtn:['设置','Settings'],
   collapse:['收起','Collapse'],
   expand:['展开','Expand'],
-  refreshAll:['批量刷新报价 / EOD','Refresh Quotes / EOD'],
+  refreshAll:['更新数据','Update Data'],
   json:['JSON','JSON'],
   bind:['绑定','Bind'],
   load:['读取','Load'],
@@ -1476,17 +1501,24 @@ function posCard(p){
         <div class="ct" style="font-size:11px;color:var(--txt-dim);margin-bottom:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           ${dual('情景模拟','What-if Simulator')} <span style="color:var(--txt-faint);font-size:10px">· ${dual('假设某一天、标的为某价位时的期权价与回报','assume a date & underlying price → option value and return')}</span>
         </div>
-        <div class="simrow">
+        <div class="simrow dateRow">
           <label>${dual('日期','Date')}</label>
           <input type="range" id="simd_${p.id}" min="0" max="${simTotal}" step="1" value="${simElapsed}">
-          <span class="simval" id="simdv_${p.id}"></span>
+          <span class="simdate-right">
+            <span class="simval" id="simdv_${p.id}"></span>
+            <span class="simrel" id="simrel_${p.id}"></span>
+            <button type="button" class="sim-today" data-pid="${p.id}">${dual('今天','Today')}</button>
+          </span>
         </div>
-        <div class="simrow">
+        <div class="simrow underRow">
           <label>${dual('标的价','Underlying')}</label>
           <input type="range" id="sims_${p.id}" min="${simLo}" max="${simHi}" step="${simStep}" value="${+(+p.under).toFixed(2)}">
-          <span class="simval" id="simsv_${p.id}"></span>
+          <span class="simdate-right">
+            <span class="simval" id="simsv_${p.id}"></span>
+            <button type="button" class="sim-today" data-pid="${p.id}">${dual('最新价','Latest')}</button>
+          </span>
         </div>
-        <div class="readout" id="sim_${p.id}"></div>
+        <div class="readout simout" id="sim_${p.id}"></div>
       </div>`:''}
 
       <div style="display:flex;justify-content:space-between;align-items:center">
@@ -1872,12 +1904,15 @@ function wireSimulators(){
     const out = document.getElementById('sim_'+pid);
     const dval = document.getElementById('simdv_'+pid);
     const sval = document.getElementById('simsv_'+pid);
+    const drel = document.getElementById('simrel_'+pid);
+    const todayBtn = wrap.querySelector('.dateRow .sim-today');
+    const latestBtn = wrap.querySelector('.underRow .sim-today');
     if(!dSlider||!sSlider||!out) return;
     const open = p.open||todayStr();
     const total = Math.max(dteFrom(p.exp, open),1);
+    const todayDay = Math.min(Math.max(dteFrom(todayStr(), open),0), total);  // slider index for "today"
     const curUnder = +p.under;
     const curMark = currentMark(p);
-    const cap = capital(p);
     const sym = ccySym(p.ccy);
     const m = n => (n>=0?'+':'')+sym+Math.round(n).toLocaleString('en-US');
     const cls = n => n>=0?'pos':'neg';
@@ -1893,20 +1928,21 @@ function wireSimulators(){
       const price = bsOptionAt(p, S, T);
       const pl = (p.prem - price)*p.qty*p.mult;
       const capturePct = p.prem ? (p.prem - price)/p.prem*100 : null;
-      const rocPct = cap ? pl/cap*100 : null;
       const underChg = curUnder ? (S-curUnder)/curUnder*100 : null;
       const priceChg = curMark ? (price-curMark)/curMark*100 : null;
-      dval.textContent = `${ds} · ${rem}d`;
+      dval.textContent = ds;
+      if(drel){ const rel = day - todayDay; drel.textContent = rel===0 ? dual('今天','today') : (rel>0?'+'+rel+'d':rel+'d'); }
       sval.textContent = `${sym}${S.toFixed(2)}${underChg==null?'':' ('+signPct(underChg)+')'}`;
       out.innerHTML = `
         <div class="rd"><span>${ds} · ${dual('剩','DTE')} ${Math.max(rem,0)}d</span><span>${dual('标的','Under')} ${sym}${S.toFixed(2)}${underChg==null?'':' ('+signPct(underChg)+')'}</span></div>
-        <div class="rc"><div class="rk">${dual('情景期权价','Scenario Price')}</div><div class="rv">${sym}${price.toFixed(2)}<br><span style="font-size:9.5px;color:var(--txt-faint)">${curMark==null?dual('当前 —','cur —'):dual('当前','cur')+' '+sym+curMark.toFixed(2)+(priceChg==null?'':' (Δ'+signPct(priceChg,0)+')')}</span></div></div>
+        <div class="rc"><div class="rk">${dual('情景期权价','Scenario Price')}</div><div class="rv"><span class="simprice">${sym}${price.toFixed(2)}</span><span class="simchg ${priceChg>=0?'pos':'neg'}">${priceChg==null?'':'('+signPct(priceChg,2)+')'}</span><br><span class="simcur">${curMark==null?dual('当前价格 —','Current —'):dual('当前价格','Current')+' '+sym+curMark.toFixed(2)}</span></div></div>
         <div class="rc"><div class="rk">${dual('情景盈亏','Scenario P/L')}</div><div class="rv ${cls(pl)}">${m(pl)}</div></div>
-        <div class="rc"><div class="rk">${dual('权利金捕获','Premium Capture')}</div><div class="rv ${cls(capturePct||0)}">${capturePct==null?'—':signPct(capturePct,0)}</div></div>
-        <div class="rc"><div class="rk">${dual('资金回报','Return on Capital')}</div><div class="rv ${cls(rocPct||0)}">${rocPct==null?'—':signPct(rocPct)}</div></div>`;
+        <div class="rc"><div class="rk">${dual('权利金捕获','Premium Capture')}</div><div class="rv ${cls(capturePct||0)}">${capturePct==null?'—':signPct(capturePct,0)}</div></div>`;
     }
     dSlider.addEventListener('input', update);
     sSlider.addEventListener('input', update);
+    if(todayBtn) todayBtn.addEventListener('click', ()=>{ dSlider.value = todayDay; update(); });
+    if(latestBtn) latestBtn.addEventListener('click', ()=>{ sSlider.value = curUnder; update(); });
     update();
   });
 }
@@ -2141,7 +2177,16 @@ function applyOptionQuote(p, q){
     volume: q.volume
   };
   if(q.mid!=null) p.mark = +q.mid;
-  if(q.iv!=null) p.iv = +q.iv;
+  const hasRealQuote = q.ask!=null && q.ask>0;   // genuine bid/ask market present
+  if(hasRealQuote && q.iv!=null){
+    p.iv = +q.iv;                                // real market — trust yfinance implied vol
+  } else if(q.mid!=null){
+    const iv = impliedVol(p, +q.mid);            // no real bid/ask — back out IV from the mid price
+    if(iv!=null) p.iv = iv;
+    else if(q.iv!=null) p.iv = +q.iv;            // unsolvable (≤ intrinsic) — keep yfinance IV
+  } else if(q.iv!=null){
+    p.iv = +q.iv;
+  }
 }
 
 async function refreshFormEod(force){
